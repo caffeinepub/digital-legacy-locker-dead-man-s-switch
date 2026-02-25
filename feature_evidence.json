@@ -1,0 +1,116 @@
+{
+  "kind": "feature_evidence_report",
+  "features": [
+    {
+      "featureId": "feature-create-a-new-frontend-route-death-verification-request-with-a-secure-death-verification-request-page-styled-in-a-dark-professional-theme-consistent-with-the-existing-app-palette-the-page-must-include-full-name-of-deceased-user-text-input-registered-email-of-deceased-user-email-input-heir-s-full-name-text-input-relationship-to-deceased-dropdown-or-text-input-government-id-upload-required-pdf-jpg-png-max-10mb-official-death-certificate-upload-required-pdf-jpg-png-max-10mb-and-optional-relationship-proof-upload-pdf-jpg-png-max-10mb-display-privacy-and-security-callout-labels-e-g-all-data-is-encrypted-and-handled-confidentially-register-this-route-in-app-tsx",
+      "featureTitle": "Create a new frontend route '/death-verification-request' with a secure Death Verification Request page styled in a dark professional theme consistent with the existing app palette. The page must include: Full Name of Deceased User (text input), Registered Email of Deceased User (email input), Heir's Full Name (text input), Relationship to Deceased (dropdown or text input), Government ID Upload (required, PDF/JPG/PNG, max 10MB), Official Death Certificate Upload (required, PDF/JPG/PNG, max 10MB), and Optional Relationship Proof Upload (PDF/JPG/PNG, max 10MB). Display privacy and security callout labels (e.g., 'All data is encrypted and handled confidentially'). Register this route in App.tsx.",
+      "files": [
+        "frontend/src/App.tsx",
+        "frontend/src/pages/DeathVerificationRequestPage.tsx"
+      ],
+      "components": [
+        "authorization@4.0.0",
+        "blob-storage@4.0.0",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0",
+        "user-approval@3.0.0"
+      ],
+      "testIds": [
+        "REQ-1"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-implement-an-in-app-otp-verification-step-on-the-death-verification-request-page-before-the-form-can-be-submitted-the-heir-must-request-an-otp-generated-in-the-frontend-displayed-on-screen-with-a-copy-to-clipboard-button-consistent-with-the-existing-otp-pattern-in-loginpage-tsx-and-registrationpage-tsx-the-heir-must-enter-the-correct-otp-to-unlock-the-final-submit-button-this-step-should-be-clearly-labeled-as-verify-your-identity-before-submission",
+      "featureTitle": "Implement an in-app OTP verification step on the Death Verification Request page. Before the form can be submitted, the heir must request an OTP (generated in the frontend, displayed on screen with a copy-to-clipboard button, consistent with the existing OTP pattern in LoginPage.tsx and RegistrationPage.tsx). The heir must enter the correct OTP to unlock the final submit button. This step should be clearly labeled as 'Verify Your Identity before Submission'.",
+      "files": [
+        "frontend/src/pages/DeathVerificationRequestPage.tsx"
+      ],
+      "components": [
+        "authorization@4.0.0",
+        "blob-storage@4.0.0",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0",
+        "user-approval@3.0.0"
+      ],
+      "testIds": [
+        "REQ-2"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-after-successful-otp-verification-and-form-submission-replace-the-form-with-a-confirmation-message-your-request-has-been-received-and-is-under-verification-you-will-be-notified-within-3-5-business-days-display-this-in-a-styled-confirmation-card-with-a-checkmark-icon-and-security-badge",
+      "featureTitle": "After successful OTP verification and form submission, replace the form with a confirmation message: 'Your request has been received and is under verification. You will be notified within 3–5 business days.' Display this in a styled confirmation card with a checkmark icon and security badge.",
+      "files": [
+        "frontend/src/hooks/useQueries.ts",
+        "frontend/src/pages/DeathVerificationRequestPage.tsx"
+      ],
+      "components": [
+        "authorization@4.0.0",
+        "blob-storage@4.0.0",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0",
+        "user-approval@3.0.0"
+      ],
+      "testIds": [
+        "REQ-3"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-add-a-death-verification-requests-section-to-the-existing-admin-dashboard-adminlegalverificationpage-tsx-or-a-new-admindeathverificationpage-tsx-display-a-table-of-all-submitted-deathverificationrequest-records-showing-requestid-deceasedfullname-deceasedemail-heirfullname-relationshiptodeceased-status-badge-pending-verification-approved-rejected-and-submittedat-timestamp-each-row-must-have-approve-and-reject-action-buttons-that-call-updatedeathverificationstatus-use-the-existing-securitybadge-component-for-status-display",
+      "featureTitle": "Add a 'Death Verification Requests' section to the existing Admin dashboard (AdminLegalVerificationPage.tsx or a new AdminDeathVerificationPage.tsx). Display a table of all submitted DeathVerificationRequest records showing: requestId, deceasedFullName, deceasedEmail, heirFullName, relationshipToDeceased, status badge (Pending Verification / Approved / Rejected), and submittedAt timestamp. Each row must have Approve and Reject action buttons that call updateDeathVerificationStatus. Use the existing SecurityBadge component for status display.",
+      "files": [
+        "frontend/src/App.tsx",
+        "frontend/src/components/Navbar.tsx",
+        "frontend/src/hooks/useQueries.ts",
+        "frontend/src/pages/AdminDeathVerificationPage.tsx"
+      ],
+      "components": [
+        "authorization@4.0.0",
+        "blob-storage@4.0.0",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0",
+        "user-approval@3.0.0"
+      ],
+      "testIds": [
+        "REQ-6"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-add-a-navigation-link-to-the-death-verification-request-page-in-the-public-facing-navbar-visible-to-unauthenticated-users-or-on-the-landingpage-as-a-cta-labeled-submit-heir-verification-request-register-the-route-in-app-tsx-router-configuration",
+      "featureTitle": "Add a navigation link to the Death Verification Request page in the public-facing Navbar (visible to unauthenticated users) or on the LandingPage as a CTA, labeled 'Submit Heir Verification Request'. Register the route in App.tsx router configuration.",
+      "files": [
+        "frontend/src/components/Navbar.tsx",
+        "frontend/src/pages/LandingPage.tsx"
+      ],
+      "components": [
+        "authorization@4.0.0",
+        "blob-storage@4.0.0",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0",
+        "user-approval@3.0.0"
+      ],
+      "testIds": [
+        "REQ-7"
+      ],
+      "confidence": "high"
+    }
+  ]
+}

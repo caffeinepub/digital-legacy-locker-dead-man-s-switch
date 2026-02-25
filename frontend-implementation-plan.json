@@ -1,0 +1,124 @@
+{
+  "kind": "implementation_plan",
+  "version": "1.0",
+  "title": "Death Verification Request Page with OTP, File Uploads, and Admin Dashboard Integration",
+  "requirements": [
+    {
+      "id": "REQ-1",
+      "summary": "Create Death Verification Request page at /death-verification-request with form fields for deceased user info, heir info, and three file uploads (Government ID, Death Certificate, Relationship Proof), with file validation and privacy callouts",
+      "acceptanceCriteria": [
+        "Route '/death-verification-request' renders without errors",
+        "All six form fields are present and labeled clearly",
+        "File upload inputs accept only PDF, JPG, PNG and reject other formats with an inline error message",
+        "Files exceeding 10MB are rejected with an inline error message",
+        "Page uses the existing dark theme color palette",
+        "Privacy/security callout is visible on the page"
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/pages/DeathVerificationRequestPage.tsx",
+          "operation": "create",
+          "description": "Create the Death Verification Request page component with a form containing six fields: Full Name of Deceased User (text input), Registered Email of Deceased User (email input), Heir's Full Name (text input), Relationship to Deceased (dropdown with options matching PersistentRelationship enum: spouse, child, sibling, legalRepresentative, other), Government ID Upload (file input, required, PDF/JPG/PNG, max 10MB), Official Death Certificate Upload (file input, required, PDF/JPG/PNG, max 10MB), and Optional Relationship Proof Upload (file input, PDF/JPG/PNG, max 10MB). Implement frontend file validation: check file type (accept only .pdf, .jpg, .jpeg, .png) and file size (max 10MB) on file selection, showing inline error messages for violations. Include a privacy/security callout section with text 'All data is encrypted and handled confidentially' using the SecurityBadge component. Style the page using the existing dark navy theme from frontend/src/index.css and frontend/tailwind.config.js. Store uploaded files in component state as File objects. Use the blob-storage component (ExternalBlob.fromBytes) to prepare files for backend submission. This page will be enhanced with OTP verification in REQ-2 and submission logic in REQ-3."
+        },
+        {
+          "path": "frontend/src/App.tsx",
+          "operation": "modify",
+          "description": "Register the new /death-verification-request route in the router configuration. Import DeathVerificationRequestPage and add a Route element for path='/death-verification-request' that renders the DeathVerificationRequestPage component. This route should be publicly accessible (no authentication required)."
+        }
+      ]
+    },
+    {
+      "id": "REQ-2",
+      "summary": "Implement in-app OTP verification step on the Death Verification Request page, with OTP generation, display with copy-to-clipboard, and correct OTP entry required to enable the Submit button",
+      "acceptanceCriteria": [
+        "An 'Send OTP' / 'Generate OTP' button is present on the page",
+        "OTP is displayed in-app with a copy-to-clipboard button after generation",
+        "The Submit button is disabled until the correct OTP is entered",
+        "Entering an incorrect OTP shows an error message",
+        "Entering the correct OTP enables the Submit button"
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/pages/DeathVerificationRequestPage.tsx",
+          "operation": "modify",
+          "description": "Add in-app OTP verification flow consistent with the existing pattern in LoginPage.tsx and RegistrationPage.tsx. Add state variables for: generatedOTP (string | null), otpInput (string), otpVerified (boolean), and otpError (string | null). Add a 'Generate OTP' button labeled 'Verify Your Identity before Submission' that generates a 6-digit numeric OTP (using Math.random), stores it in generatedOTP state, and displays it in a styled code block with a copy-to-clipboard button. Add an OTP input field where the heir enters the displayed OTP. On OTP input change, compare the entered value with generatedOTP; if correct, set otpVerified to true and clear otpError; if incorrect when user attempts to proceed, show an inline error message ('Incorrect OTP. Please try again.'). Keep the Submit button disabled (disabled={!otpVerified || filesInvalid}) until otpVerified is true and all required files pass validation. Style the OTP section using the same dark theme and layout patterns from the existing OTP flows."
+        }
+      ]
+    },
+    {
+      "id": "REQ-3",
+      "summary": "On successful form submission (after OTP verification), replace the form with a confirmation message card showing 'Your request has been received and is under verification. You will be notified within 3–5 business days.' with checkmark icon and security badge",
+      "acceptanceCriteria": [
+        "On successful submission the form is hidden and the confirmation card is shown",
+        "The confirmation card displays the exact message specified",
+        "A success/checkmark icon and security badge are visible on the confirmation card"
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/pages/DeathVerificationRequestPage.tsx",
+          "operation": "modify",
+          "description": "Implement form submission and success state. Add a submissionSuccess state variable (boolean, default false). On Submit button click, validate that otpVerified is true and all required files are present and valid. Convert the uploaded File objects to Uint8Array using FileReader or a helper function. Call the backend submitDeathVerificationRequest function from the actor (via useActor hook) with the form data: deceasedFullName, deceasedEmail, heirFullName, relationshipToDeceased, governmentIdBlob (Uint8Array), deathCertificateBlob (Uint8Array), and relationshipProofBlob (Uint8Array | null). On successful submission, set submissionSuccess to true. Conditionally render: if submissionSuccess is true, hide the form and display a styled confirmation card with a checkmark icon, the SecurityBadge component (variant 'verified' or 'approved'), and the message 'Your request has been received and is under verification. You will be notified within 3–5 business days.' Style the confirmation card using the existing dark theme palette and layout patterns from success pages like AccessReleaseSuccessPage.tsx."
+        },
+        {
+          "path": "frontend/src/hooks/useQueries.ts",
+          "operation": "modify",
+          "description": "Add a mutation hook useSubmitDeathVerificationRequest that wraps the actor's submitDeathVerificationRequest function. The mutation should accept the form payload (deceasedFullName, deceasedEmail, heirFullName, relationshipToDeceased, governmentIdBlob, deathCertificateBlob, relationshipProofBlob) and return the requestId. Include error handling with toast notifications for submission failures. This hook will be used by DeathVerificationRequestPage to submit the verification request."
+        }
+      ]
+    },
+    {
+      "id": "REQ-6",
+      "summary": "Add a 'Death Verification Requests' section to the Admin dashboard displaying a table of all submitted requests with requestId, deceased info, heir info, relationship, status badge, timestamp, and Approve/Reject action buttons",
+      "acceptanceCriteria": [
+        "Admin dashboard shows the Death Verification Requests table",
+        "All required columns are displayed",
+        "Status is shown using SecurityBadge component",
+        "Approve and Reject buttons trigger status update and refresh the table",
+        "Non-admin users cannot access this section"
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/pages/AdminDeathVerificationPage.tsx",
+          "operation": "create",
+          "description": "Create a new admin-only page for managing death verification requests. Use the useIsAdmin hook to check admin status and display an access denied message if the user is not an admin. Fetch all death verification requests using a new query hook (to be added in useQueries.ts) that calls the backend getDeathVerificationRequests function. Display the requests in a table with columns: requestId, deceasedFullName, deceasedEmail, heirFullName, relationshipToDeceased (display the enum value as a human-readable label), status (render using SecurityBadge component with variants 'pending' for PendingVerification, 'approved' for Approved, 'rejected' for Rejected), submittedAt (format as a readable date/time using new Date(Number(submittedAt) / 1000000).toLocaleString()), and Actions column with Approve and Reject buttons. Each action button should call a mutation hook (to be added in useQueries.ts) that invokes updateDeathVerificationStatus with the requestId and the new status (#Approved or #Rejected). On successful mutation, invalidate the death verification requests query to refresh the table. Style the page using the existing dark theme and admin page layout patterns from AdminLegalVerificationPage.tsx. Include loading states, error handling, and toast notifications for actions."
+        },
+        {
+          "path": "frontend/src/hooks/useQueries.ts",
+          "operation": "modify",
+          "description": "Add two new hooks: (1) useGetDeathVerificationRequests: a query hook that calls actor.getDeathVerificationRequests() and returns the array of PersistentDeathVerificationRequest records. Enable the query only when the actor is available and the user is authenticated. (2) useUpdateDeathVerificationStatus: a mutation hook that accepts requestId (bigint) and newStatus (Variant_Approved_Rejected enum) and calls actor.updateDeathVerificationStatus(requestId, newStatus). On success, invalidate the 'deathVerificationRequests' query key to trigger a refetch. Include error handling with toast notifications."
+        },
+        {
+          "path": "frontend/src/App.tsx",
+          "operation": "modify",
+          "description": "Register the new /admin/death-verification route in the router configuration. Import AdminDeathVerificationPage and add a Route element for path='/admin/death-verification' that renders the AdminDeathVerificationPage component. This route should be protected (admin-only access enforced within the page component via useIsAdmin hook)."
+        },
+        {
+          "path": "frontend/src/components/Navbar.tsx",
+          "operation": "modify",
+          "description": "Add a navigation link to the Admin Death Verification page in the admin navigation section. When the user's role is 'admin' (checked via useGetCallerUserRole), display a link labeled 'Death Verifications' that navigates to /admin/death-verification. Insert this link near the existing admin links (e.g., after 'Legal Verification' or 'Access Release'). Use the same styling and layout as existing admin nav links."
+        }
+      ]
+    },
+    {
+      "id": "REQ-7",
+      "summary": "Add a public navigation link to the Death Verification Request page labeled 'Submit Heir Verification Request' in the Navbar or on the LandingPage as a CTA",
+      "acceptanceCriteria": [
+        "A link to '/death-verification-request' is accessible from the public navigation or landing page",
+        "Clicking the link navigates to the Death Verification Request page",
+        "The route is registered in App.tsx"
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/components/Navbar.tsx",
+          "operation": "modify",
+          "description": "Add a public navigation link labeled 'Submit Heir Verification Request' in the Navbar. This link should be visible to unauthenticated users (guests) and should navigate to /death-verification-request. Insert the link in the public navigation section (e.g., near 'Home' or 'Features' if those exist, or in a prominent position for guest users). Use the same styling and layout as existing public nav links. The link should be accessible regardless of authentication status."
+        },
+        {
+          "path": "frontend/src/pages/LandingPage.tsx",
+          "operation": "modify",
+          "description": "Add a call-to-action (CTA) section or button on the LandingPage that links to the Death Verification Request page. The CTA should be labeled 'Submit Heir Verification Request' or similar (e.g., 'Verify Heir Status', 'Access Deceased Account'). Position the CTA prominently in the hero section or in a dedicated features/services section. Style the CTA using the existing button styles and dark theme palette. The CTA should navigate to /death-verification-request when clicked. This provides an additional public entry point for heirs to initiate the verification process."
+        }
+      ]
+    }
+  ]
+}

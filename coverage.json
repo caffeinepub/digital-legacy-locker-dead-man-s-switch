@@ -1,0 +1,123 @@
+{
+  "kind": "coverage_report",
+  "version": "1.0",
+  "generatedAt": "2026-02-25T15:42:32.768Z",
+  "sources": {
+    "buildRequest": true,
+    "implementationPlan": true
+  },
+  "requirements": {
+    "total": 7,
+    "implemented": 5,
+    "items": [
+      {
+        "id": "REQ-1",
+        "summary": "Create a new frontend route '/death-verification-request' with a secure Death Verification Request page styled in a dark professional theme consistent with the existing app palette. The page must include: Full Name of Deceased User (text input), Registered Email of Deceased User (email input), Heir's Full Name (text input), Relationship to Deceased (dropdown or text input), Government ID Upload (required, PDF/JPG/PNG, max 10MB), Official Death Certificate Upload (required, PDF/JPG/PNG, max 10MB), and Optional Relationship Proof Upload (PDF/JPG/PNG, max 10MB). Display privacy and security callout labels (e.g., 'All data is encrypted and handled confidentially'). Register this route in App.tsx.",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/pages/DeathVerificationRequestPage.tsx",
+          "frontend/src/App.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/pages/DeathVerificationRequestPage.tsx",
+          "frontend/src/App.tsx"
+        ]
+      },
+      {
+        "id": "REQ-2",
+        "summary": "Implement an in-app OTP verification step on the Death Verification Request page. Before the form can be submitted, the heir must request an OTP (generated in the frontend, displayed on screen with a copy-to-clipboard button, consistent with the existing OTP pattern in LoginPage.tsx and RegistrationPage.tsx). The heir must enter the correct OTP to unlock the final submit button. This step should be clearly labeled as 'Verify Your Identity before Submission'.",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/pages/DeathVerificationRequestPage.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/pages/DeathVerificationRequestPage.tsx"
+        ]
+      },
+      {
+        "id": "REQ-3",
+        "summary": "After successful OTP verification and form submission, replace the form with a confirmation message: 'Your request has been received and is under verification. You will be notified within 3–5 business days.' Display this in a styled confirmation card with a checkmark icon and security badge.",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/pages/DeathVerificationRequestPage.tsx",
+          "frontend/src/hooks/useQueries.ts"
+        ],
+        "matchedFiles": [
+          "frontend/src/pages/DeathVerificationRequestPage.tsx",
+          "frontend/src/hooks/useQueries.ts"
+        ]
+      },
+      {
+        "id": "REQ-4",
+        "summary": "Add a backend Motoko data type and stable storage for DeathVerificationRequest records. Each record must store: deceasedFullName (Text), deceasedEmail (Text), heirFullName (Text), relationshipToDeceased (Text), governmentIdBlob (Blob), deathCertificateBlob (Blob), relationshipProofBlob (optional Blob), status (variant: #PendingVerification | #Approved | #Rejected), submittedAt (Int timestamp), and a unique requestId (Nat). Expose a public update function submitDeathVerificationRequest that accepts these fields, stores the record with status #PendingVerification, and returns the requestId. Add a timestamped activity log entry for each submission.",
+        "status": "unknown",
+        "plannedFiles": [],
+        "matchedFiles": []
+      },
+      {
+        "id": "REQ-5",
+        "summary": "Expose a backend admin-only query function getDeathVerificationRequests that returns all DeathVerificationRequest records. Also expose an admin-only update function updateDeathVerificationStatus(requestId: Nat, newStatus: variant{#Approved; #Rejected}) that updates the status of a request and logs the action. Enforce admin-only access using the existing role-based access control pattern in main.mo.",
+        "status": "unknown",
+        "plannedFiles": [],
+        "matchedFiles": []
+      },
+      {
+        "id": "REQ-6",
+        "summary": "Add a 'Death Verification Requests' section to the existing Admin dashboard (AdminLegalVerificationPage.tsx or a new AdminDeathVerificationPage.tsx). Display a table of all submitted DeathVerificationRequest records showing: requestId, deceasedFullName, deceasedEmail, heirFullName, relationshipToDeceased, status badge (Pending Verification / Approved / Rejected), and submittedAt timestamp. Each row must have Approve and Reject action buttons that call updateDeathVerificationStatus. Use the existing SecurityBadge component for status display.",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/pages/AdminDeathVerificationPage.tsx",
+          "frontend/src/hooks/useQueries.ts",
+          "frontend/src/App.tsx",
+          "frontend/src/components/Navbar.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/pages/AdminDeathVerificationPage.tsx",
+          "frontend/src/hooks/useQueries.ts",
+          "frontend/src/App.tsx",
+          "frontend/src/components/Navbar.tsx"
+        ]
+      },
+      {
+        "id": "REQ-7",
+        "summary": "Add a navigation link to the Death Verification Request page in the public-facing Navbar (visible to unauthenticated users) or on the LandingPage as a CTA, labeled 'Submit Heir Verification Request'. Register the route in App.tsx router configuration.",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/components/Navbar.tsx",
+          "frontend/src/pages/LandingPage.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/components/Navbar.tsx",
+          "frontend/src/pages/LandingPage.tsx"
+        ]
+      }
+    ]
+  },
+  "changedFiles": [
+    "backend/main.mo",
+    "backend/user-approval/approval.mo",
+    "build-request.json",
+    "caffeine.lock.json",
+    "feature_evidence.json",
+    "frontend-file-summaries.txt",
+    "frontend-implementation-plan.json",
+    "frontend/src/App.tsx",
+    "frontend/src/backend.d.ts",
+    "frontend/src/backend.ts",
+    "frontend/src/components/Navbar.tsx",
+    "frontend/src/declarations/backend.did.d.ts",
+    "frontend/src/declarations/backend.did.js",
+    "frontend/src/hooks/useQueries.ts",
+    "frontend/src/pages/AddAssetPage.tsx",
+    "frontend/src/pages/AdminDeathVerificationPage.tsx",
+    "frontend/src/pages/Dashboard.tsx",
+    "frontend/src/pages/DeathVerificationRequestPage.tsx",
+    "frontend/src/pages/LandingPage.tsx",
+    "frontend/src/pages/NomineeManagementPage.tsx",
+    "frontend/src/pages/RegistrationPage.tsx",
+    "project_state.json",
+    "scratch/component-selection.json",
+    "spec.md",
+    "spec_vs_diff_report.json"
+  ]
+}
