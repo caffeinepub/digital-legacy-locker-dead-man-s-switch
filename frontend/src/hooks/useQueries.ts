@@ -11,10 +11,18 @@ import type {
   PersistentLegalVerification,
   PersistentAccountState,
   PersistentDeathVerificationRequest,
+  DocumentMetadata,
 } from '../backend';
-import { PersistentCategory, Variant_Approved_Rejected } from '../backend';
+import { Variant_Approved_Rejected } from '../backend';
 import type { Principal } from '@icp-sdk/core/principal';
 import { toast } from 'sonner';
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+export function formatTimestamp(ts: bigint | number): string {
+  const ms = typeof ts === 'bigint' ? Number(ts) / 1_000_000 : ts;
+  return new Date(ms).toLocaleString();
+}
 
 // ─── User Profile ─────────────────────────────────────────────────────────────
 
@@ -245,36 +253,6 @@ export function useRejectLegalVerification() {
   });
 }
 
-// ─── Activity Logs ────────────────────────────────────────────────────────────
-
-export function useGetCallerActivityLogs() {
-  const { actor, isFetching } = useActor();
-  const { identity } = useInternetIdentity();
-
-  return useQuery<PersistentActivityLog[]>({
-    queryKey: ['activityLogs', identity?.getPrincipal().toString()],
-    queryFn: async () => {
-      if (!actor) return [];
-      return actor.getCallerActivityLogs();
-    },
-    enabled: !!actor && !isFetching && !!identity,
-  });
-}
-
-export function useGetAllActivityLogs() {
-  const { actor, isFetching } = useActor();
-  const { identity } = useInternetIdentity();
-
-  return useQuery<PersistentActivityLog[]>({
-    queryKey: ['allActivityLogs'],
-    queryFn: async () => {
-      if (!actor) return [];
-      return actor.getActivityLogs();
-    },
-    enabled: !!actor && !isFetching && !!identity,
-  });
-}
-
 // ─── Account State ────────────────────────────────────────────────────────────
 
 export function useGetAccountState() {
@@ -307,7 +285,37 @@ export function useUpdateAccountState() {
   });
 }
 
-// ─── Access Release ───────────────────────────────────────────────────────────
+// ─── Activity Logs ────────────────────────────────────────────────────────────
+
+export function useGetActivityLogs() {
+  const { actor, isFetching } = useActor();
+  const { identity } = useInternetIdentity();
+
+  return useQuery<PersistentActivityLog[]>({
+    queryKey: ['activityLogs'],
+    queryFn: async () => {
+      if (!actor) return [];
+      return actor.getActivityLogs();
+    },
+    enabled: !!actor && !isFetching && !!identity,
+  });
+}
+
+export function useGetCallerActivityLogs() {
+  const { actor, isFetching } = useActor();
+  const { identity } = useInternetIdentity();
+
+  return useQuery<PersistentActivityLog[]>({
+    queryKey: ['callerActivityLogs', identity?.getPrincipal().toString()],
+    queryFn: async () => {
+      if (!actor) return [];
+      return actor.getCallerActivityLogs();
+    },
+    enabled: !!actor && !isFetching && !!identity,
+  });
+}
+
+// ─── Controlled Access Release ────────────────────────────────────────────────
 
 export function useRecordAccessRelease() {
   const { actor } = useActor();
@@ -319,19 +327,19 @@ export function useRecordAccessRelease() {
       return actor.recordAccessRelease(user, note);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['allActivityLogs'] });
+      queryClient.invalidateQueries({ queryKey: ['activityLogs'] });
     },
   });
 }
 
-// ─── Death Verification Requests ─────────────────────────────────────────────
+// ─── Death Verification Requests ──────────────────────────────────────────────
 
 export function useSubmitDeathVerificationRequest() {
   const { actor } = useActor();
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (payload: {
+    mutationFn: async (params: {
       deceasedFullName: string;
       deceasedEmail: string;
       heirFullName: string;
@@ -342,21 +350,18 @@ export function useSubmitDeathVerificationRequest() {
     }) => {
       if (!actor) throw new Error('Actor not available');
       return actor.submitDeathVerificationRequest(
-        payload.deceasedFullName,
-        payload.deceasedEmail,
-        payload.heirFullName,
-        payload.relationshipToDeceased,
-        payload.governmentIdBlob,
-        payload.deathCertificateBlob,
-        payload.relationshipProofBlob,
+        params.deceasedFullName,
+        params.deceasedEmail,
+        params.heirFullName,
+        params.relationshipToDeceased,
+        params.governmentIdBlob,
+        params.deathCertificateBlob,
+        params.relationshipProofBlob,
       );
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['deathVerificationRequests'] });
-      queryClient.invalidateQueries({ queryKey: ['allActivityLogs'] });
-    },
-    onError: () => {
-      toast.error('Failed to submit verification request. Please try again.');
+      queryClient.invalidateQueries({ queryKey: ['activityLogs'] });
     },
   });
 }
@@ -392,28 +397,47 @@ export function useUpdateDeathVerificationStatus() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['deathVerificationRequests'] });
-      queryClient.invalidateQueries({ queryKey: ['allActivityLogs'] });
-    },
-    onError: () => {
-      toast.error('Failed to update verification status. Please try again.');
+      queryClient.invalidateQueries({ queryKey: ['activityLogs'] });
     },
   });
 }
 
-// ─── Category helpers ─────────────────────────────────────────────────────────
+// ─── Admin Documents ──────────────────────────────────────────────────────────
 
-export function getCategoryLabel(cat: PersistentCategory): string {
-  const map: Record<PersistentCategory, string> = {
-    [PersistentCategory.banking]: 'Banking',
-    [PersistentCategory.socialMedia]: 'Social Media',
-    [PersistentCategory.crypto]: 'Crypto',
-    [PersistentCategory.cloud]: 'Cloud',
-    [PersistentCategory.other]: 'Other',
-  };
-  return map[cat] ?? cat;
+export function useAdminDocuments() {
+  const { actor, isFetching } = useActor();
+  const { identity } = useInternetIdentity();
+
+  return useQuery<DocumentMetadata[]>({
+    queryKey: ['adminDocuments'],
+    queryFn: async () => {
+      if (!actor) return [];
+      return actor.getAllDocumentsWithMetadata();
+    },
+    enabled: !!actor && !isFetching && !!identity,
+  });
 }
 
-export function formatTimestamp(ts: bigint): string {
-  const ms = Number(ts / BigInt(1_000_000));
-  return new Date(ms).toLocaleString();
+export function useVerifyDocument() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      documentId,
+      approve,
+      note,
+    }: {
+      documentId: bigint;
+      approve: boolean;
+      note: string | null;
+    }) => {
+      if (!actor) throw new Error('Actor not available');
+      return actor.verifyDocument(documentId, approve, note);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['adminDocuments'] });
+      queryClient.invalidateQueries({ queryKey: ['activityLogs'] });
+    },
+  });
 }

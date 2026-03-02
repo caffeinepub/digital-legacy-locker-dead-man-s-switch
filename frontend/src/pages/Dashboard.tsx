@@ -1,314 +1,366 @@
-import { useRouter } from '@tanstack/react-router';
-import { useInternetIdentity } from '../hooks/useInternetIdentity';
+import React from 'react';
+import { useNavigate } from '@tanstack/react-router';
 import {
+  Shield,
+  Lock,
+  Users,
+  FileCheck,
+  Activity,
+  Plus,
+  ChevronRight,
+  AlertCircle,
+  CheckCircle,
+  Clock,
+  Database,
+} from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+  useGetCallerUserProfile,
   useGetAssets,
   useGetNominees,
   useGetLegalVerification,
   useGetCallerActivityLogs,
-  useGetCallerUserProfile,
-  getCategoryLabel,
-  formatTimestamp,
 } from '../hooks/useQueries';
 import { PersistentCategory, PersistentVerificationStatus, Variant_pending_approved_rejected } from '../backend';
-import {
-  Shield, Lock, Users, FileCheck, Activity, Plus, ArrowRight,
-  ShieldCheck, AlertTriangle, Cpu, CheckCircle, Clock
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import SecurityBadge from '../components/SecurityBadge';
+
+const categoryLabels: Record<PersistentCategory, string> = {
+  [PersistentCategory.banking]: 'Banking',
+  [PersistentCategory.socialMedia]: 'Social Media',
+  [PersistentCategory.crypto]: 'Crypto',
+  [PersistentCategory.cloud]: 'Cloud',
+  [PersistentCategory.other]: 'Other',
+};
 
 export default function Dashboard() {
-  const router = useRouter();
-  const { identity } = useInternetIdentity();
-
-  const { data: profile, isLoading: profileLoading } = useGetCallerUserProfile();
-  const { data: assets = [], isLoading: assetsLoading } = useGetAssets();
-  const { data: nominees = [], isLoading: nomineesLoading } = useGetNominees();
+  const navigate = useNavigate();
+  const { data: userProfile, isLoading: profileLoading } = useGetCallerUserProfile();
+  const { data: assets, isLoading: assetsLoading } = useGetAssets();
+  const { data: nominees, isLoading: nomineesLoading } = useGetNominees();
   const { data: legalVerification, isLoading: legalLoading } = useGetLegalVerification();
-  const { data: activityLogs = [], isLoading: logsLoading } = useGetCallerActivityLogs();
+  const { data: activityLogs, isLoading: logsLoading } = useGetCallerActivityLogs();
 
-  if (!identity) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-navy-50">
-        <div className="text-center">
-          <Shield size={48} className="text-navy-300 mx-auto mb-4" />
-          <h2 className="font-display text-2xl font-bold text-navy-900 mb-2">Authentication Required</h2>
-          <p className="text-navy-500 mb-6">Please log in to access your dashboard.</p>
-          <Button onClick={() => router.navigate({ to: '/login' })}>Login</Button>
-        </div>
-      </div>
-    );
-  }
-
-  // Category breakdown
-  const categoryBreakdown = Object.values(PersistentCategory).map((cat) => ({
-    category: cat,
-    count: assets.filter((a) => a.category === cat).length,
-  })).filter((c) => c.count > 0);
+  const verifiedNominees = nominees?.filter(
+    (n) => n.verificationStatus === PersistentVerificationStatus.verified
+  ).length ?? 0;
 
   const legalStatus = legalVerification?.status ?? null;
 
-  const verifiedNominees = nominees.filter((n) => n.verificationStatus === PersistentVerificationStatus.verified).length;
+  const getLegalStatusBadge = () => {
+    if (!legalStatus) return <Badge variant="outline">Not Initiated</Badge>;
+    switch (legalStatus) {
+      case Variant_pending_approved_rejected.approved:
+        return <Badge className="bg-accent/20 text-accent border-accent/30">Approved</Badge>;
+      case Variant_pending_approved_rejected.rejected:
+        return <Badge variant="destructive">Rejected</Badge>;
+      default:
+        return <Badge variant="outline" className="text-gold border-gold/30">Pending</Badge>;
+    }
+  };
+
+  const formatTimestamp = (ts: bigint) => {
+    const ms = Number(ts) / 1_000_000;
+    return new Date(ms).toLocaleString();
+  };
 
   return (
-    <div className="min-h-screen bg-navy-50 py-8 px-4">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="min-h-screen bg-background">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="font-display text-3xl font-bold text-navy-900">
-              {profileLoading ? 'Loading...' : `Welcome, ${profile?.name ?? 'User'}`}
-            </h1>
-            <p className="text-navy-500 mt-1">Your digital legacy is secure and protected.</p>
-          </div>
-          <div className="flex items-center gap-3">
-            <SecurityBadge type="noAccess" />
-            <SecurityBadge type="aes256" />
-          </div>
-        </div>
-
-        {/* Security Status Bar */}
-        <div className="bg-navy-900 rounded-2xl p-5 flex flex-wrap gap-4 items-center justify-between">
-          <div className="flex items-center gap-2">
-            <ShieldCheck size={20} className="text-emerald-400" />
-            <span className="text-white font-semibold text-sm">Security Status</span>
-          </div>
-          <div className="flex flex-wrap gap-3">
-            <div className="flex items-center gap-1.5 text-xs text-emerald-400">
-              <CheckCircle size={13} /> Encryption Active
+        <div className="mb-8">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 border border-primary/30">
+              <Shield className="h-5 w-5 text-primary" />
             </div>
-            <div className="flex items-center gap-1.5 text-xs text-emerald-400">
-              <CheckCircle size={13} /> MFA Enabled
-            </div>
-            <div className="flex items-center gap-1.5 text-xs text-emerald-400">
-              <CheckCircle size={13} /> Blockchain Secured
-            </div>
-            <div className="flex items-center gap-1.5 text-xs text-amber-400">
-              <AlertTriangle size={13} /> No Access During Lifetime
+            <div>
+              {profileLoading ? (
+                <Skeleton className="h-7 w-48" />
+              ) : (
+                <h1 className="text-2xl font-bold text-foreground">
+                  Welcome back, {userProfile?.name ?? 'User'}
+                </h1>
+              )}
+              <p className="text-sm text-muted-foreground">Dead Man's Switch — Your Digital Legacy Vault</p>
             </div>
           </div>
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {[
-            {
-              label: 'Digital Assets',
-              value: assetsLoading ? '—' : assets.length,
-              icon: <Lock size={20} className="text-primary" />,
-              sub: `${categoryBreakdown.length} categories`,
-              action: () => router.navigate({ to: '/assets/add' }),
-            },
-            {
-              label: 'Nominees',
-              value: nomineesLoading ? '—' : nominees.length,
-              icon: <Users size={20} className="text-purple-500" />,
-              sub: `${verifiedNominees} verified`,
-              action: () => router.navigate({ to: '/nominees' }),
-            },
-            {
-              label: 'Legal Status',
-              value: legalLoading ? '—' : (legalStatus === Variant_pending_approved_rejected.approved ? 'Approved' : legalStatus === Variant_pending_approved_rejected.rejected ? 'Rejected' : legalStatus === Variant_pending_approved_rejected.pending ? 'Pending' : 'Not Filed'),
-              icon: <FileCheck size={20} className="text-amber-500" />,
-              sub: 'Verification status',
-              action: undefined,
-            },
-            {
-              label: 'Activity Logs',
-              value: logsLoading ? '—' : activityLogs.length,
-              icon: <Activity size={20} className="text-emerald-500" />,
-              sub: 'Total events',
-              action: undefined,
-            },
-          ].map((stat, i) => (
-            <Card
-              key={i}
-              className={`shadow-card hover:shadow-card-hover transition-smooth ${stat.action ? 'cursor-pointer' : ''}`}
-              onClick={stat.action}
-            >
-              <CardContent className="p-5">
-                <div className="flex items-start justify-between mb-3">
-                  <div className="p-2 bg-navy-50 rounded-lg">{stat.icon}</div>
-                  {stat.action && <ArrowRight size={16} className="text-navy-300" />}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <Card className="glass-card">
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10">
+                  <Lock className="h-4 w-4 text-primary" />
                 </div>
-                <div className="text-2xl font-display font-bold text-navy-900">{stat.value}</div>
-                <div className="text-sm font-medium text-navy-700 mt-0.5">{stat.label}</div>
-                <div className="text-xs text-navy-400 mt-0.5">{stat.sub}</div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {/* Main Content Grid */}
-        <div className="grid lg:grid-cols-3 gap-6">
-          {/* Asset Overview */}
-          <Card className="shadow-card lg:col-span-2">
-            <CardHeader className="flex flex-row items-center justify-between pb-3">
-              <CardTitle className="font-display text-lg text-navy-900 flex items-center gap-2">
-                <Lock size={18} className="text-primary" /> Digital Assets
-              </CardTitle>
-              <Button size="sm" onClick={() => router.navigate({ to: '/assets/add' })} className="gap-1.5">
-                <Plus size={14} /> Add Asset
-              </Button>
-            </CardHeader>
-            <CardContent>
+                <Badge variant="outline" className="text-xs">Assets</Badge>
+              </div>
               {assetsLoading ? (
-                <div className="space-y-3">
-                  {[1, 2, 3].map((i) => <Skeleton key={i} className="h-12 w-full" />)}
-                </div>
-              ) : assets.length === 0 ? (
-                <div className="text-center py-10">
-                  <Lock size={36} className="text-navy-200 mx-auto mb-3" />
-                  <p className="text-navy-500 text-sm">No assets stored yet.</p>
-                  <Button variant="outline" size="sm" className="mt-3" onClick={() => router.navigate({ to: '/assets/add' })}>
-                    Add Your First Asset
-                  </Button>
-                </div>
+                <Skeleton className="h-8 w-16" />
               ) : (
-                <div className="space-y-2">
-                  {assets.slice(0, 5).map((asset, i) => (
-                    <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-navy-50 hover:bg-navy-100 transition-smooth">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                          <Lock size={14} className="text-primary" />
-                        </div>
-                        <div>
-                          <p className="font-medium text-navy-900 text-sm">{asset.platform}</p>
-                          <p className="text-xs text-navy-400">{asset.username}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
-                          {getCategoryLabel(asset.category)}
-                        </span>
-                        <SecurityBadge type="aes256" />
-                      </div>
-                    </div>
-                  ))}
-                  {assets.length > 5 && (
-                    <p className="text-xs text-navy-400 text-center pt-2">
-                      +{assets.length - 5} more assets
-                    </p>
-                  )}
-                </div>
+                <div className="text-3xl font-bold text-foreground">{assets?.length ?? 0}</div>
               )}
+              <p className="text-xs text-muted-foreground mt-1">Encrypted digital assets</p>
             </CardContent>
           </Card>
 
-          {/* Nominees & Legal */}
-          <div className="space-y-4">
-            {/* Nominees */}
-            <Card className="shadow-card cursor-pointer hover:shadow-card-hover transition-smooth" onClick={() => router.navigate({ to: '/nominees' })}>
-              <CardHeader className="pb-2">
-                <CardTitle className="font-display text-base text-navy-900 flex items-center gap-2">
-                  <Users size={16} className="text-purple-500" /> Nominees
-                </CardTitle>
+          <Card className="glass-card">
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent/10">
+                  <Users className="h-4 w-4 text-accent" />
+                </div>
+                <Badge variant="outline" className="text-xs">Nominees</Badge>
+              </div>
+              {nomineesLoading ? (
+                <Skeleton className="h-8 w-16" />
+              ) : (
+                <div className="text-3xl font-bold text-foreground">{nominees?.length ?? 0}</div>
+              )}
+              <p className="text-xs text-muted-foreground mt-1">
+                {verifiedNominees} verified
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="glass-card">
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gold/10">
+                  <FileCheck className="h-4 w-4 text-gold" />
+                </div>
+                <Badge variant="outline" className="text-xs">Legal</Badge>
+              </div>
+              {legalLoading ? (
+                <Skeleton className="h-8 w-24" />
+              ) : (
+                getLegalStatusBadge()
+              )}
+              <p className="text-xs text-muted-foreground mt-1">Legal verification status</p>
+            </CardContent>
+          </Card>
+
+          <Card className="glass-card">
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-secondary">
+                  <Activity className="h-4 w-4 text-muted-foreground" />
+                </div>
+                <Badge variant="outline" className="text-xs">Activity</Badge>
+              </div>
+              {logsLoading ? (
+                <Skeleton className="h-8 w-16" />
+              ) : (
+                <div className="text-3xl font-bold text-foreground">{activityLogs?.length ?? 0}</div>
+              )}
+              <p className="text-xs text-muted-foreground mt-1">Total actions logged</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Main Content Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Assets Panel */}
+          <div className="lg:col-span-2 space-y-6">
+            <Card className="glass-card">
+              <CardHeader className="flex flex-row items-center justify-between pb-3">
+                <div>
+                  <CardTitle className="text-lg">Digital Assets</CardTitle>
+                  <CardDescription>Your encrypted digital accounts and credentials</CardDescription>
+                </div>
+                <Button
+                  size="sm"
+                  onClick={() => navigate({ to: '/assets/add' })}
+                  className="gap-1.5"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  Add Asset
+                </Button>
+              </CardHeader>
+              <CardContent>
+                {assetsLoading ? (
+                  <div className="space-y-3">
+                    {[1, 2, 3].map((i) => <Skeleton key={i} className="h-14 w-full" />)}
+                  </div>
+                ) : assets && assets.length > 0 ? (
+                  <div className="space-y-2">
+                    {assets.slice(0, 5).map((asset, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-center justify-between p-3 rounded-lg bg-secondary/50 hover:bg-secondary transition-colors"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10">
+                            <Database className="h-4 w-4 text-primary" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-foreground">{asset.platform}</p>
+                            <p className="text-xs text-muted-foreground">{asset.username}</p>
+                          </div>
+                        </div>
+                        <Badge variant="outline" className="text-xs">
+                          {categoryLabels[asset.category]}
+                        </Badge>
+                      </div>
+                    ))}
+                    {assets.length > 5 && (
+                      <button
+                        onClick={() => navigate({ to: '/assets/add' })}
+                        className="w-full text-center text-sm text-primary hover:underline py-2"
+                      >
+                        View all {assets.length} assets
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <Lock className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
+                    <p className="text-sm text-muted-foreground mb-3">No assets added yet</p>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => navigate({ to: '/assets/add' })}
+                    >
+                      Add Your First Asset
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Nominees Panel */}
+            <Card className="glass-card">
+              <CardHeader className="flex flex-row items-center justify-between pb-3">
+                <div>
+                  <CardTitle className="text-lg">Nominees</CardTitle>
+                  <CardDescription>Trusted individuals designated to receive your legacy</CardDescription>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => navigate({ to: '/nominees' })}
+                  className="gap-1.5"
+                >
+                  Manage
+                  <ChevronRight className="h-3.5 w-3.5" />
+                </Button>
               </CardHeader>
               <CardContent>
                 {nomineesLoading ? (
-                  <Skeleton className="h-10 w-full" />
-                ) : nominees.length === 0 ? (
-                  <p className="text-navy-400 text-sm">No nominees added.</p>
-                ) : (
+                  <div className="space-y-3">
+                    {[1, 2].map((i) => <Skeleton key={i} className="h-14 w-full" />)}
+                  </div>
+                ) : nominees && nominees.length > 0 ? (
                   <div className="space-y-2">
-                    {nominees.slice(0, 3).map((n, i) => (
-                      <div key={i} className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <div className="w-7 h-7 rounded-full bg-purple-100 flex items-center justify-center">
-                            <span className="text-purple-600 font-bold text-xs">{n.name.charAt(0)}</span>
+                    {nominees.map((nominee, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-center justify-between p-3 rounded-lg bg-secondary/50"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-accent/10 text-accent font-semibold text-sm">
+                            {nominee.name.charAt(0).toUpperCase()}
                           </div>
-                          <span className="text-sm text-navy-800 font-medium">{n.name}</span>
+                          <div>
+                            <p className="text-sm font-medium text-foreground">{nominee.name}</p>
+                            <p className="text-xs text-muted-foreground capitalize">
+                              {nominee.relationship.toString()}
+                            </p>
+                          </div>
                         </div>
-                        <SecurityBadge
-                          type={
-                            n.verificationStatus === PersistentVerificationStatus.verified
-                              ? 'verified'
-                              : n.verificationStatus === PersistentVerificationStatus.rejected
-                              ? 'rejected'
-                              : 'pending'
-                          }
-                        />
+                        {nominee.verificationStatus === PersistentVerificationStatus.verified ? (
+                          <CheckCircle className="h-4 w-4 text-accent" />
+                        ) : nominee.verificationStatus === PersistentVerificationStatus.rejected ? (
+                          <AlertCircle className="h-4 w-4 text-destructive" />
+                        ) : (
+                          <Clock className="h-4 w-4 text-gold" />
+                        )}
                       </div>
                     ))}
                   </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <Users className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
+                    <p className="text-sm text-muted-foreground mb-3">No nominees added yet</p>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => navigate({ to: '/nominees' })}
+                    >
+                      Add a Nominee
+                    </Button>
+                  </div>
                 )}
               </CardContent>
             </Card>
+          </div>
 
+          {/* Right Panel */}
+          <div className="space-y-6">
             {/* Legal Verification */}
-            <Card className="shadow-card">
-              <CardHeader className="pb-2">
-                <CardTitle className="font-display text-base text-navy-900 flex items-center gap-2">
-                  <FileCheck size={16} className="text-amber-500" /> Legal Status
-                </CardTitle>
+            <Card className="glass-card">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg">Legal Status</CardTitle>
+                <CardDescription>Your legal verification progress</CardDescription>
               </CardHeader>
               <CardContent>
                 {legalLoading ? (
-                  <Skeleton className="h-8 w-full" />
+                  <Skeleton className="h-20 w-full" />
                 ) : (
-                  <div className="space-y-2">
-                    {legalStatus === Variant_pending_approved_rejected.approved ? (
-                      <SecurityBadge type="approved" />
-                    ) : legalStatus === Variant_pending_approved_rejected.rejected ? (
-                      <SecurityBadge type="rejected" />
-                    ) : legalStatus === Variant_pending_approved_rejected.pending ? (
-                      <SecurityBadge type="pending" />
-                    ) : (
-                      <p className="text-navy-400 text-sm">No verification filed.</p>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">Status</span>
+                      {getLegalStatusBadge()}
+                    </div>
+                    {legalVerification?.auditTrail && legalVerification.auditTrail.length > 0 && (
+                      <div className="space-y-1">
+                        <p className="text-xs text-muted-foreground font-medium">Recent Activity</p>
+                        {legalVerification.auditTrail.slice(-2).map((entry, idx) => (
+                          <p key={idx} className="text-xs text-muted-foreground bg-secondary/50 rounded p-2">
+                            {entry}
+                          </p>
+                        ))}
+                      </div>
                     )}
-                    <p className="text-xs text-navy-400 mt-1">
-                      Death certificate verification status
-                    </p>
                   </div>
                 )}
               </CardContent>
             </Card>
 
-            {/* Encryption Badge */}
-            <div className="p-4 rounded-xl bg-navy-900 text-center">
-              <Cpu size={20} className="text-navy-300 mx-auto mb-2" />
-              <p className="text-white text-xs font-semibold">AES-256 Military-Grade</p>
-              <p className="text-navy-400 text-xs mt-0.5">All data encrypted at rest</p>
-            </div>
+            {/* Activity Log */}
+            <Card className="glass-card">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg">Recent Activity</CardTitle>
+                <CardDescription>Your latest actions on Dead Man's Switch</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {logsLoading ? (
+                  <div className="space-y-2">
+                    {[1, 2, 3].map((i) => <Skeleton key={i} className="h-10 w-full" />)}
+                  </div>
+                ) : activityLogs && activityLogs.length > 0 ? (
+                  <div className="space-y-2">
+                    {[...activityLogs].reverse().slice(0, 5).map((log, idx) => (
+                      <div key={idx} className="p-2 rounded-lg bg-secondary/50">
+                        <p className="text-xs text-foreground">{log.action}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {formatTimestamp(log.timestamp)}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-6">
+                    <Activity className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
+                    <p className="text-xs text-muted-foreground">No activity yet</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </div>
         </div>
-
-        {/* Activity Log */}
-        <Card className="shadow-card">
-          <CardHeader className="pb-3">
-            <CardTitle className="font-display text-lg text-navy-900 flex items-center gap-2">
-              <Activity size={18} className="text-emerald-500" /> Recent Activity
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {logsLoading ? (
-              <div className="space-y-3">
-                {[1, 2, 3].map((i) => <Skeleton key={i} className="h-10 w-full" />)}
-              </div>
-            ) : activityLogs.length === 0 ? (
-              <p className="text-navy-400 text-sm text-center py-6">No activity recorded yet.</p>
-            ) : (
-              <ScrollArea className="h-48">
-                <div className="space-y-2 pr-4">
-                  {[...activityLogs].reverse().slice(0, 10).map((log, i) => (
-                    <div key={i} className="flex items-start gap-3 p-2.5 rounded-lg bg-navy-50">
-                      <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                        <Clock size={11} className="text-primary" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm text-navy-800">{log.action}</p>
-                        <p className="text-xs text-navy-400 mt-0.5">{formatTimestamp(log.timestamp)}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </ScrollArea>
-            )}
-          </CardContent>
-        </Card>
       </div>
     </div>
   );

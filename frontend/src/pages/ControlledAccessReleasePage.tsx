@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useRouter } from '@tanstack/react-router';
 import { useInternetIdentity } from '../hooks/useInternetIdentity';
-import { useIsAdmin, useGetAllActivityLogs, useRecordAccessRelease, formatTimestamp } from '../hooks/useQueries';
+import { useIsAdmin, useGetActivityLogs, useRecordAccessRelease, formatTimestamp } from '../hooks/useQueries';
 import { Principal } from '@dfinity/principal';
 import {
   Shield,
@@ -42,7 +42,7 @@ export default function ControlledAccessReleasePage() {
   const router = useRouter();
   const { identity } = useInternetIdentity();
   const { data: isAdmin, isLoading: adminLoading } = useIsAdmin();
-  const { data: activityLogs = [], isLoading: logsLoading } = useGetAllActivityLogs();
+  const { data: activityLogs = [], isLoading: logsLoading } = useGetActivityLogs();
   const recordRelease = useRecordAccessRelease();
 
   const [authStep, setAuthStep] = useState<AuthStep>('credentials');

@@ -1,148 +1,214 @@
-import { useState } from 'react';
-import { useRouter } from '@tanstack/react-router';
+import React, { useState } from 'react';
+import { useNavigate, useLocation } from '@tanstack/react-router';
+import { Shield, Menu, X, Lock, ShieldCheck } from 'lucide-react';
 import { useInternetIdentity } from '../hooks/useInternetIdentity';
 import { useQueryClient } from '@tanstack/react-query';
-import { useIsAdmin } from '../hooks/useQueries';
-import { Shield, Menu, X, Lock, LogOut, LayoutDashboard, Users, FileCheck, Key, FileText, ClipboardCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { useIsAdmin } from '../hooks/useQueries';
+
+type AppRoute =
+  | '/'
+  | '/login'
+  | '/register'
+  | '/dashboard'
+  | '/assets/add'
+  | '/nominees'
+  | '/admin/dashboard'
+  | '/admin/legal-verification'
+  | '/admin/access-release'
+  | '/admin/access-release/success'
+  | '/admin/death-verification'
+  | '/admin/documents'
+  | '/death-verification-request';
 
 export default function Navbar() {
-  const router = useRouter();
-  const { identity, clear, login, loginStatus } = useInternetIdentity();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { login, clear, loginStatus, identity } = useInternetIdentity();
   const queryClient = useQueryClient();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
   const isAuthenticated = !!identity;
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const { data: isAdmin } = useIsAdmin();
+  const isLoggingIn = loginStatus === 'logging-in';
 
-  const handleLogout = async () => {
-    await clear();
-    queryClient.clear();
-    router.navigate({ to: '/' });
-    setMobileOpen(false);
+  const { data: isAdmin, isLoading: adminLoading } = useIsAdmin();
+
+  // Only show admin links when authenticated AND admin check is complete AND user is admin
+  const showAdminLinks = isAuthenticated && !adminLoading && isAdmin === true;
+
+  const handleAuth = async () => {
+    if (isAuthenticated) {
+      await clear();
+      queryClient.clear();
+      navigate({ to: '/' });
+    } else {
+      try {
+        await login();
+      } catch (error: any) {
+        console.error('Login error:', error);
+        if (error.message === 'User is already authenticated') {
+          await clear();
+          setTimeout(() => login(), 300);
+        }
+      }
+    }
   };
 
-  const handleLogin = () => {
-    router.navigate({ to: '/login' });
-    setMobileOpen(false);
-  };
-
-  const navLinks = [
-    ...(isAuthenticated ? [
-      { label: 'Dashboard', to: '/dashboard', icon: <LayoutDashboard size={15} /> },
-      { label: 'Assets', to: '/assets/add', icon: <Lock size={15} /> },
-      { label: 'Nominees', to: '/nominees', icon: <Users size={15} /> },
-    ] : [
-      { label: 'Heir Verification', to: '/death-verification-request', icon: <FileText size={15} /> },
-    ]),
-    ...(isAdmin ? [
-      { label: 'Legal Verification', to: '/admin/legal-verification', icon: <FileCheck size={15} /> },
-      { label: 'Access Release', to: '/admin/access-release', icon: <Key size={15} /> },
-      { label: 'Death Verifications', to: '/admin/death-verification', icon: <ClipboardCheck size={15} /> },
-    ] : []),
+  const userNavLinks: { label: string; path: AppRoute }[] = [
+    { label: 'Dashboard', path: '/dashboard' },
+    { label: 'Assets', path: '/assets/add' },
+    { label: 'Nominees', path: '/nominees' },
   ];
 
+  const adminNavLinks: { label: string; path: AppRoute }[] = [
+    { label: 'Document Review', path: '/admin/documents' },
+    { label: 'Admin Dashboard', path: '/admin/dashboard' },
+    { label: 'Legal Verification', path: '/admin/legal-verification' },
+    { label: 'Access Release', path: '/admin/access-release' },
+    { label: 'Death Verifications', path: '/admin/death-verification' },
+  ];
+
+  const guestNavLinks: { label: string; path: AppRoute }[] = [
+    { label: 'Home', path: '/' },
+    { label: 'Heir Verification', path: '/death-verification-request' },
+  ];
+
+  const navLinks: { label: string; path: AppRoute; isAdmin?: boolean }[] = isAuthenticated
+    ? [
+        ...userNavLinks,
+        ...(showAdminLinks ? adminNavLinks.map(l => ({ ...l, isAdmin: true })) : []),
+      ]
+    : guestNavLinks;
+
+  const isActive = (path: string) => location.pathname === path;
+
   return (
-    <header className="sticky top-0 z-50 bg-navy-900 border-b border-navy-700 shadow-md">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
+    <nav className="sticky top-0 z-50 border-b border-border/50 bg-background/90 backdrop-blur-md">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="flex h-16 items-center justify-between">
           {/* Logo */}
           <button
-            onClick={() => router.navigate({ to: isAuthenticated ? '/dashboard' : '/' })}
-            className="flex items-center gap-2.5 group"
+            onClick={() => navigate({ to: isAuthenticated ? '/dashboard' : '/' })}
+            className="flex items-center gap-2 group"
           >
-            <img
-              src="/assets/generated/logo-icon.dim_128x128.png"
-              alt="Digital Legacy Locker"
-              className="w-8 h-8 rounded-lg"
-            />
-            <span className="font-display font-bold text-white text-lg hidden sm:block">
-              Legacy<span className="text-navy-300">Locker</span>
-            </span>
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 border border-primary/30 group-hover:bg-primary/20 transition-colors">
+              <Shield className="h-5 w-5 text-primary" />
+            </div>
+            <div className="flex flex-col leading-none">
+              <span className="text-sm font-bold text-foreground tracking-tight">
+                Dead Man's Switch
+              </span>
+              <span className="text-[10px] text-muted-foreground tracking-wider">
+                Secure Today. Protected Forever.
+              </span>
+            </div>
           </button>
 
-          {/* Desktop Nav */}
-          <nav className="hidden md:flex items-center gap-1">
+          {/* Desktop Nav Links */}
+          <div className="hidden md:flex items-center gap-1">
             {navLinks.map((link) => (
               <button
-                key={link.to}
-                onClick={() => router.navigate({ to: link.to })}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-md text-sm text-navy-200 hover:text-white hover:bg-navy-700 transition-smooth font-medium"
+                key={link.path}
+                onClick={() => navigate({ to: link.path })}
+                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                  link.isAdmin
+                    ? isActive(link.path)
+                      ? 'bg-amber-500/20 text-amber-600'
+                      : 'text-amber-600/80 hover:text-amber-600 hover:bg-amber-500/10'
+                    : isActive(link.path)
+                    ? 'bg-primary/10 text-primary'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-secondary'
+                }`}
               >
-                {link.icon}
                 {link.label}
               </button>
             ))}
-          </nav>
-
-          {/* Auth Button */}
-          <div className="hidden md:flex items-center gap-3">
-            {isAuthenticated ? (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleLogout}
-                className="text-navy-200 hover:text-white hover:bg-navy-700 gap-1.5"
-              >
-                <LogOut size={15} />
-                Logout
-              </Button>
-            ) : (
-              <Button
-                size="sm"
-                onClick={handleLogin}
-                disabled={loginStatus === 'logging-in'}
-                className="bg-primary hover:bg-primary/90 text-white gap-1.5"
-              >
-                <Shield size={15} />
-                {loginStatus === 'logging-in' ? 'Connecting...' : 'Login'}
-              </Button>
-            )}
           </div>
 
-          {/* Mobile Menu Toggle */}
+          {/* Auth Button + Admin Badge */}
+          <div className="hidden md:flex items-center gap-3">
+            {isAuthenticated && showAdminLinks && (
+              <div className="flex items-center gap-1.5">
+                <ShieldCheck className="h-3.5 w-3.5 text-amber-500" />
+                <Badge className="text-xs bg-amber-500/20 text-amber-600 border-amber-500/30 hover:bg-amber-500/30 px-2 py-0">
+                  Admin
+                </Badge>
+              </div>
+            )}
+            {isAuthenticated && !showAdminLinks && !adminLoading && (
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Lock className="h-3 w-3 text-accent" />
+                <span>Secured</span>
+              </div>
+            )}
+            <Button
+              onClick={handleAuth}
+              disabled={isLoggingIn}
+              variant={isAuthenticated ? 'outline' : 'default'}
+              size="sm"
+            >
+              {isLoggingIn ? 'Connecting...' : isAuthenticated ? 'Logout' : 'Login'}
+            </Button>
+          </div>
+
+          {/* Mobile Menu Button */}
           <button
-            className="md:hidden text-navy-200 hover:text-white p-2"
-            onClick={() => setMobileOpen(!mobileOpen)}
+            className="md:hidden p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           >
-            {mobileOpen ? <X size={22} /> : <Menu size={22} />}
+            {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
         </div>
-      </div>
 
-      {/* Mobile Menu */}
-      {mobileOpen && (
-        <div className="md:hidden bg-navy-800 border-t border-navy-700 px-4 py-3 space-y-1 animate-fade-in">
-          {navLinks.map((link) => (
-            <button
-              key={link.to}
-              onClick={() => { router.navigate({ to: link.to }); setMobileOpen(false); }}
-              className="flex items-center gap-2 w-full px-3 py-2.5 rounded-md text-sm text-navy-200 hover:text-white hover:bg-navy-700 transition-smooth font-medium"
-            >
-              {link.icon}
-              {link.label}
-            </button>
-          ))}
-          <div className="pt-2 border-t border-navy-700">
-            {isAuthenticated ? (
+        {/* Mobile Menu */}
+        {mobileMenuOpen && (
+          <div className="md:hidden border-t border-border/50 py-3 space-y-1">
+            {navLinks.map((link) => (
               <button
-                onClick={handleLogout}
-                className="flex items-center gap-2 w-full px-3 py-2.5 rounded-md text-sm text-red-400 hover:bg-navy-700 transition-smooth font-medium"
+                key={link.path}
+                onClick={() => {
+                  navigate({ to: link.path });
+                  setMobileMenuOpen(false);
+                }}
+                className={`w-full text-left px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  link.isAdmin
+                    ? isActive(link.path)
+                      ? 'bg-amber-500/20 text-amber-600'
+                      : 'text-amber-600/80 hover:text-amber-600 hover:bg-amber-500/10'
+                    : isActive(link.path)
+                    ? 'bg-primary/10 text-primary'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-secondary'
+                }`}
               >
-                <LogOut size={15} />
-                Logout
+                {link.label}
               </button>
-            ) : (
-              <button
-                onClick={handleLogin}
-                className="flex items-center gap-2 w-full px-3 py-2.5 rounded-md text-sm text-white bg-primary hover:bg-primary/90 transition-smooth font-medium"
+            ))}
+            <div className="pt-2 border-t border-border/50">
+              {isAuthenticated && showAdminLinks && (
+                <div className="flex items-center gap-1.5 px-3 py-1 mb-2">
+                  <ShieldCheck className="h-3.5 w-3.5 text-amber-500" />
+                  <Badge className="text-xs bg-amber-500/20 text-amber-600 border-amber-500/30 px-2 py-0">
+                    Admin
+                  </Badge>
+                </div>
+              )}
+              <Button
+                onClick={() => {
+                  handleAuth();
+                  setMobileMenuOpen(false);
+                }}
+                disabled={isLoggingIn}
+                variant={isAuthenticated ? 'outline' : 'default'}
+                size="sm"
+                className="w-full"
               >
-                <Shield size={15} />
-                Login
-              </button>
-            )}
+                {isLoggingIn ? 'Connecting...' : isAuthenticated ? 'Logout' : 'Login'}
+              </Button>
+            </div>
           </div>
-        </div>
-      )}
-    </header>
+        )}
+      </div>
+    </nav>
   );
 }

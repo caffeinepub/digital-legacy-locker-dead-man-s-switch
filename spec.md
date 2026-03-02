@@ -1,16 +1,11 @@
 # Specification
 
 ## Summary
-**Goal:** Add a Death Verification Request feature to the Digital Legacy Locker, allowing heirs to submit verified access requests, with admin dashboard integration for review and approval.
+**Goal:** Fix three frontend issues: admin login visibility on the login page, post-login redirects for both admin and regular users, and admin-only navbar links being properly gated.
 
 **Planned changes:**
-- Add a new frontend route `/death-verification-request` with a dark-themed form collecting deceased user info, heir details, and three file uploads (Government ID, Death Certificate, optional Relationship Proof), with file validation (PDF/JPG/PNG, max 10MB) and privacy/security callout labels
-- Implement an in-app OTP verification step on the page (consistent with existing LoginPage/RegistrationPage pattern) that must be completed before the form can be submitted
-- Show a confirmation card after successful submission with a checkmark icon, security badge, and message about 3–5 business day review
-- Add `DeathVerificationRequest` type and stable storage in `backend/main.mo` with all required fields (including Blob uploads), status variant (`#PendingVerification | #Approved | #Rejected`), timestamp, and unique requestId
-- Expose a `submitDeathVerificationRequest` update function that stores the record and logs a timestamped activity entry
-- Expose admin-only `getDeathVerificationRequests` query and `updateDeathVerificationStatus` update functions with role-based access control
-- Add a Death Verification Requests section to the Admin dashboard displaying a table with all request fields, SecurityBadge status indicators, and Approve/Reject action buttons
-- Add a "Submit Heir Verification Request" navigation link in the public-facing Navbar or Landing page CTA, and register the route in App.tsx
+- Update the LoginPage so that both "User Login" and "Admin Login" options are visible and accessible on initial page load, with clear visual distinction between the two modes
+- Fix the post-login redirect logic so that admins are redirected to `/admin/dashboard` after successful login, new users are redirected to `/register`, and returning users are redirected to `/dashboard`
+- Update the Navbar to show admin-specific navigation links only when the authenticated user is confirmed as an admin; guests and regular users must not see any admin links; visibility updates correctly on login and logout
 
-**User-visible outcome:** Heirs can navigate to a public page, complete identity verification via OTP, submit a death verification request with supporting documents, and receive a confirmation. Admins can view all submissions in the dashboard and approve or reject them.
+**User-visible outcome:** Users can immediately see and switch between user and admin login modes on the login page, are redirected to the correct destination after login, and admin navigation links only appear for admin users in the navbar.

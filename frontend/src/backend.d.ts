@@ -49,6 +49,17 @@ export interface PersistentLegalVerification {
     status: Variant_pending_approved_rejected;
     auditTrail: Array<string>;
 }
+export interface DocumentMetadata {
+    id: bigint;
+    status: DocumentStatus;
+    verificationTime?: Time;
+    submitter: Principal;
+    blob: ExternalBlob;
+    adminVerifier?: Principal;
+    adminNote?: string;
+    timestamp: Time;
+    docType: DocumentType;
+}
 export interface UserApprovalInfo {
     status: ApprovalStatus;
     principal: Principal;
@@ -74,6 +85,11 @@ export interface PersistentActivityLog {
 export interface PersistentUserProfile {
     name: string;
     encryptedData: PersistentEncryptedData;
+}
+export enum DocumentType {
+    idProof = "idProof",
+    deathCertificate = "deathCertificate",
+    relationshipProof = "relationshipProof"
 }
 export enum PersistentCategory {
     other = "other",
@@ -136,6 +152,10 @@ export interface backendInterface {
      */
     getActivityLogs(): Promise<Array<PersistentActivityLog>>;
     /**
+     * / Admin-only: Returns all documents with metadata.
+     */
+    getAllDocumentsWithMetadata(): Promise<Array<DocumentMetadata>>;
+    /**
      * / Returns the caller's own digital assets. Requires authenticated user role.
      */
     getAssets(): Promise<Array<PersistentDigitalAsset>>;
@@ -145,6 +165,9 @@ export interface backendInterface {
     getCallerActivityLogs(): Promise<Array<PersistentActivityLog>>;
     getCallerUserProfile(): Promise<PersistentUserProfile | null>;
     getCallerUserRole(): Promise<UserRole>;
+    /**
+     * / Admin-only: Returns all death verification requests.
+     */
     getDeathVerificationRequests(): Promise<Array<PersistentDeathVerificationRequest>>;
     /**
      * / Returns the legal verification record for the caller. Requires authenticated user role.
@@ -159,6 +182,10 @@ export interface backendInterface {
      */
     getNominees(): Promise<Array<PersistentNominee>>;
     getUserProfile(user: Principal): Promise<PersistentUserProfile | null>;
+    /**
+     * / Returns documents submitted by the caller (with metadata). Requires authenticated user role.
+     */
+    getUserSubmittedDocuments(): Promise<Array<DocumentMetadata>>;
     /**
      * / Initiates a legal verification request for the caller (e.g., submitting a death certificate).
      * / Requires authenticated user role.
@@ -190,11 +217,25 @@ export interface backendInterface {
      * / Admin-only: Sets the verification status of a nominee for a given user.
      */
     setNomineeVerificationStatus(user: Principal, nomineeIndex: bigint, status: PersistentVerificationStatus): Promise<void>;
+    /**
+     * / Submits a death verification request. Requires authenticated user role.
+     */
     submitDeathVerificationRequest(deceasedFullName: string, deceasedEmail: string, heirFullName: string, relationshipToDeceased: string, governmentIdBlob: Uint8Array, deathCertificateBlob: Uint8Array, relationshipProofBlob: Uint8Array | null): Promise<bigint>;
+    /**
+     * / Submits a new document for verification. Requires authenticated user role.
+     */
+    submitDocument(docType: DocumentType, blob: ExternalBlob): Promise<bigint>;
     /**
      * / Admin-only: Updates the account state (alive/deceased) for a given user.
      * / Only admins may declare a user deceased, as this triggers controlled access release.
      */
     updateAccountState(user: Principal, alive: boolean): Promise<void>;
+    /**
+     * / Admin-only: Updates the status of a death verification request.
+     */
     updateDeathVerificationStatus(requestId: bigint, newStatus: Variant_Approved_Rejected): Promise<void>;
+    /**
+     * / Admin-only: Approves or rejects a submitted document by record ID, with an optional admin note.
+     */
+    verifyDocument(documentId: bigint, approve: boolean, note: string | null): Promise<void>;
 }

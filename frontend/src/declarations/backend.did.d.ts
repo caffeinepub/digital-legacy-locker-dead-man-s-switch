@@ -13,6 +13,23 @@ import type { Principal } from '@icp-sdk/core/principal';
 export type ApprovalStatus = { 'pending' : null } |
   { 'approved' : null } |
   { 'rejected' : null };
+export interface DocumentMetadata {
+  'id' : bigint,
+  'status' : DocumentStatus,
+  'verificationTime' : [] | [Time],
+  'submitter' : Principal,
+  'blob' : ExternalBlob,
+  'adminVerifier' : [] | [Principal],
+  'adminNote' : [] | [string],
+  'timestamp' : Time,
+  'docType' : DocumentType,
+}
+export type DocumentStatus = { 'verified' : null } |
+  { 'pending' : null } |
+  { 'rejected' : null };
+export type DocumentType = { 'idProof' : null } |
+  { 'deathCertificate' : null } |
+  { 'relationshipProof' : null };
 export type ExternalBlob = Uint8Array;
 export interface PersistentAccountState {
   'alive' : boolean,
@@ -148,6 +165,10 @@ export interface _SERVICE {
    */
   'getActivityLogs' : ActorMethod<[], Array<PersistentActivityLog>>,
   /**
+   * / Admin-only: Returns all documents with metadata.
+   */
+  'getAllDocumentsWithMetadata' : ActorMethod<[], Array<DocumentMetadata>>,
+  /**
    * / Returns the caller's own digital assets. Requires authenticated user role.
    */
   'getAssets' : ActorMethod<[], Array<PersistentDigitalAsset>>,
@@ -157,6 +178,9 @@ export interface _SERVICE {
   'getCallerActivityLogs' : ActorMethod<[], Array<PersistentActivityLog>>,
   'getCallerUserProfile' : ActorMethod<[], [] | [PersistentUserProfile]>,
   'getCallerUserRole' : ActorMethod<[], UserRole>,
+  /**
+   * / Admin-only: Returns all death verification requests.
+   */
   'getDeathVerificationRequests' : ActorMethod<
     [],
     Array<PersistentDeathVerificationRequest>
@@ -177,6 +201,10 @@ export interface _SERVICE {
    */
   'getNominees' : ActorMethod<[], Array<PersistentNominee>>,
   'getUserProfile' : ActorMethod<[Principal], [] | [PersistentUserProfile]>,
+  /**
+   * / Returns documents submitted by the caller (with metadata). Requires authenticated user role.
+   */
+  'getUserSubmittedDocuments' : ActorMethod<[], Array<DocumentMetadata>>,
   /**
    * / Initiates a legal verification request for the caller (e.g., submitting a death certificate).
    * / Requires authenticated user role.
@@ -211,19 +239,33 @@ export interface _SERVICE {
     [Principal, bigint, PersistentVerificationStatus],
     undefined
   >,
+  /**
+   * / Submits a death verification request. Requires authenticated user role.
+   */
   'submitDeathVerificationRequest' : ActorMethod<
     [string, string, string, string, Uint8Array, Uint8Array, [] | [Uint8Array]],
     bigint
   >,
   /**
+   * / Submits a new document for verification. Requires authenticated user role.
+   */
+  'submitDocument' : ActorMethod<[DocumentType, ExternalBlob], bigint>,
+  /**
    * / Admin-only: Updates the account state (alive/deceased) for a given user.
    * / Only admins may declare a user deceased, as this triggers controlled access release.
    */
   'updateAccountState' : ActorMethod<[Principal, boolean], undefined>,
+  /**
+   * / Admin-only: Updates the status of a death verification request.
+   */
   'updateDeathVerificationStatus' : ActorMethod<
     [bigint, { 'Approved' : null } | { 'Rejected' : null }],
     undefined
   >,
+  /**
+   * / Admin-only: Approves or rejects a submitted document by record ID, with an optional admin note.
+   */
+  'verifyDocument' : ActorMethod<[bigint, boolean, [] | [string]], undefined>,
 }
 export declare const idlService: IDL.ServiceClass;
 export declare const idlInitArgs: IDL.Type[];

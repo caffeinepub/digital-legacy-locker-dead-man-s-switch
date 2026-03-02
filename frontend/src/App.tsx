@@ -10,8 +10,12 @@ import ControlledAccessReleasePage from './pages/ControlledAccessReleasePage';
 import AccessReleaseSuccessPage from './pages/AccessReleaseSuccessPage';
 import DeathVerificationRequestPage from './pages/DeathVerificationRequestPage';
 import AdminDeathVerificationPage from './pages/AdminDeathVerificationPage';
+import AdminDashboardPage from './pages/AdminDashboardPage';
+import AdminDocumentReviewPage from './pages/AdminDocumentReviewPage';
 import Navbar from './components/Navbar';
+import AdminRouteGuard from './components/AdminRouteGuard';
 import { Toaster } from '@/components/ui/sonner';
+import { Heart } from 'lucide-react';
 
 function Layout() {
   return (
@@ -27,22 +31,27 @@ function Layout() {
 
 function Footer() {
   const year = new Date().getFullYear();
-  const appId = encodeURIComponent(typeof window !== 'undefined' ? window.location.hostname : 'digital-legacy-locker');
+  const appId = encodeURIComponent(
+    typeof window !== 'undefined' ? window.location.hostname : 'dead-mans-switch'
+  );
   return (
-    <footer className="bg-navy-900 text-navy-300 py-8 px-4">
+    <footer className="border-t border-border/50 bg-background py-8 px-4">
       <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-        <div className="flex items-center gap-2 text-sm">
-          <span className="text-navy-400">© {year} Digital Legacy Locker. All rights reserved.</span>
+        <div className="text-sm text-muted-foreground">
+          © {year} Dead Man's Switch. All rights reserved.
         </div>
-        <div className="text-sm text-navy-400">
+        <div className="text-sm text-muted-foreground">
+          Secure Today. Protected Forever.
+        </div>
+        <div className="text-sm text-muted-foreground flex items-center gap-1">
           Built with{' '}
-          <span className="text-red-400">♥</span>{' '}
+          <Heart className="h-3.5 w-3.5 text-destructive fill-destructive mx-0.5" />{' '}
           using{' '}
           <a
             href={`https://caffeine.ai/?utm_source=Caffeine-footer&utm_medium=referral&utm_content=${appId}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-navy-200 hover:text-white transition-colors font-medium"
+            className="text-primary hover:underline font-medium"
           >
             caffeine.ai
           </a>
@@ -95,19 +104,31 @@ const nomineesRoute = createRoute({
 const adminLegalRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/admin/legal-verification',
-  component: AdminLegalVerificationPage,
+  component: () => (
+    <AdminRouteGuard>
+      <AdminLegalVerificationPage />
+    </AdminRouteGuard>
+  ),
 });
 
 const adminAccessReleaseRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/admin/access-release',
-  component: ControlledAccessReleasePage,
+  component: () => (
+    <AdminRouteGuard>
+      <ControlledAccessReleasePage />
+    </AdminRouteGuard>
+  ),
 });
 
 const accessReleaseSuccessRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/admin/access-release/success',
-  component: AccessReleaseSuccessPage,
+  component: () => (
+    <AdminRouteGuard>
+      <AccessReleaseSuccessPage />
+    </AdminRouteGuard>
+  ),
 });
 
 const deathVerificationRequestRoute = createRoute({
@@ -119,7 +140,31 @@ const deathVerificationRequestRoute = createRoute({
 const adminDeathVerificationRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/admin/death-verification',
-  component: AdminDeathVerificationPage,
+  component: () => (
+    <AdminRouteGuard>
+      <AdminDeathVerificationPage />
+    </AdminRouteGuard>
+  ),
+});
+
+const adminDashboardRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/admin/dashboard',
+  component: () => (
+    <AdminRouteGuard>
+      <AdminDashboardPage />
+    </AdminRouteGuard>
+  ),
+});
+
+const adminDocumentsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/admin/documents',
+  component: () => (
+    <AdminRouteGuard>
+      <AdminDocumentReviewPage />
+    </AdminRouteGuard>
+  ),
 });
 
 const routeTree = rootRoute.addChildren([
@@ -134,6 +179,8 @@ const routeTree = rootRoute.addChildren([
   accessReleaseSuccessRoute,
   deathVerificationRequestRoute,
   adminDeathVerificationRoute,
+  adminDashboardRoute,
+  adminDocumentsRoute,
 ]);
 
 const router = createRouter({ routeTree });

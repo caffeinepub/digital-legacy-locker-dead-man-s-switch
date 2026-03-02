@@ -131,6 +131,17 @@ export interface PersistentLegalVerification {
     status: Variant_pending_approved_rejected;
     auditTrail: Array<string>;
 }
+export interface DocumentMetadata {
+    id: bigint;
+    status: DocumentStatus;
+    verificationTime?: Time;
+    submitter: Principal;
+    blob: ExternalBlob;
+    adminVerifier?: Principal;
+    adminNote?: string;
+    timestamp: Time;
+    docType: DocumentType;
+}
 export interface UserApprovalInfo {
     status: ApprovalStatus;
     principal: Principal;
@@ -160,6 +171,11 @@ export interface PersistentUserProfile {
 export interface _CaffeineStorageRefillResult {
     success?: boolean;
     topped_up_amount?: bigint;
+}
+export enum DocumentType {
+    idProof = "idProof",
+    deathCertificate = "deathCertificate",
+    relationshipProof = "relationshipProof"
 }
 export enum PersistentCategory {
     other = "other",
@@ -229,6 +245,10 @@ export interface backendInterface {
      */
     getActivityLogs(): Promise<Array<PersistentActivityLog>>;
     /**
+     * / Admin-only: Returns all documents with metadata.
+     */
+    getAllDocumentsWithMetadata(): Promise<Array<DocumentMetadata>>;
+    /**
      * / Returns the caller's own digital assets. Requires authenticated user role.
      */
     getAssets(): Promise<Array<PersistentDigitalAsset>>;
@@ -238,6 +258,9 @@ export interface backendInterface {
     getCallerActivityLogs(): Promise<Array<PersistentActivityLog>>;
     getCallerUserProfile(): Promise<PersistentUserProfile | null>;
     getCallerUserRole(): Promise<UserRole>;
+    /**
+     * / Admin-only: Returns all death verification requests.
+     */
     getDeathVerificationRequests(): Promise<Array<PersistentDeathVerificationRequest>>;
     /**
      * / Returns the legal verification record for the caller. Requires authenticated user role.
@@ -252,6 +275,10 @@ export interface backendInterface {
      */
     getNominees(): Promise<Array<PersistentNominee>>;
     getUserProfile(user: Principal): Promise<PersistentUserProfile | null>;
+    /**
+     * / Returns documents submitted by the caller (with metadata). Requires authenticated user role.
+     */
+    getUserSubmittedDocuments(): Promise<Array<DocumentMetadata>>;
     /**
      * / Initiates a legal verification request for the caller (e.g., submitting a death certificate).
      * / Requires authenticated user role.
@@ -283,15 +310,29 @@ export interface backendInterface {
      * / Admin-only: Sets the verification status of a nominee for a given user.
      */
     setNomineeVerificationStatus(user: Principal, nomineeIndex: bigint, status: PersistentVerificationStatus): Promise<void>;
+    /**
+     * / Submits a death verification request. Requires authenticated user role.
+     */
     submitDeathVerificationRequest(deceasedFullName: string, deceasedEmail: string, heirFullName: string, relationshipToDeceased: string, governmentIdBlob: Uint8Array, deathCertificateBlob: Uint8Array, relationshipProofBlob: Uint8Array | null): Promise<bigint>;
+    /**
+     * / Submits a new document for verification. Requires authenticated user role.
+     */
+    submitDocument(docType: DocumentType, blob: ExternalBlob): Promise<bigint>;
     /**
      * / Admin-only: Updates the account state (alive/deceased) for a given user.
      * / Only admins may declare a user deceased, as this triggers controlled access release.
      */
     updateAccountState(user: Principal, alive: boolean): Promise<void>;
+    /**
+     * / Admin-only: Updates the status of a death verification request.
+     */
     updateDeathVerificationStatus(requestId: bigint, newStatus: Variant_Approved_Rejected): Promise<void>;
+    /**
+     * / Admin-only: Approves or rejects a submitted document by record ID, with an optional admin note.
+     */
+    verifyDocument(documentId: bigint, approve: boolean, note: string | null): Promise<void>;
 }
-import type { ApprovalStatus as _ApprovalStatus, ExternalBlob as _ExternalBlob, PersistentAccountState as _PersistentAccountState, PersistentCategory as _PersistentCategory, PersistentDeathVerificationRequest as _PersistentDeathVerificationRequest, PersistentDeathVerificationStatus as _PersistentDeathVerificationStatus, PersistentDigitalAsset as _PersistentDigitalAsset, PersistentDigitalAssetInput as _PersistentDigitalAssetInput, PersistentEncryptedData as _PersistentEncryptedData, PersistentLegalVerification as _PersistentLegalVerification, PersistentNominee as _PersistentNominee, PersistentNomineeInput as _PersistentNomineeInput, PersistentRelationship as _PersistentRelationship, PersistentUserProfile as _PersistentUserProfile, PersistentVerificationStatus as _PersistentVerificationStatus, Time as _Time, UserApprovalInfo as _UserApprovalInfo, UserRole as _UserRole, _CaffeineStorageRefillInformation as __CaffeineStorageRefillInformation, _CaffeineStorageRefillResult as __CaffeineStorageRefillResult } from "./declarations/backend.did.d.ts";
+import type { ApprovalStatus as _ApprovalStatus, DocumentMetadata as _DocumentMetadata, DocumentStatus as _DocumentStatus, DocumentType as _DocumentType, ExternalBlob as _ExternalBlob, PersistentAccountState as _PersistentAccountState, PersistentCategory as _PersistentCategory, PersistentDeathVerificationRequest as _PersistentDeathVerificationRequest, PersistentDeathVerificationStatus as _PersistentDeathVerificationStatus, PersistentDigitalAsset as _PersistentDigitalAsset, PersistentDigitalAssetInput as _PersistentDigitalAssetInput, PersistentEncryptedData as _PersistentEncryptedData, PersistentLegalVerification as _PersistentLegalVerification, PersistentNominee as _PersistentNominee, PersistentNomineeInput as _PersistentNomineeInput, PersistentRelationship as _PersistentRelationship, PersistentUserProfile as _PersistentUserProfile, PersistentVerificationStatus as _PersistentVerificationStatus, Time as _Time, UserApprovalInfo as _UserApprovalInfo, UserRole as _UserRole, _CaffeineStorageRefillInformation as __CaffeineStorageRefillInformation, _CaffeineStorageRefillResult as __CaffeineStorageRefillResult } from "./declarations/backend.did.d.ts";
 export class Backend implements backendInterface {
     constructor(private actor: ActorSubclass<_SERVICE>, private _uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, private _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, private processError?: (error: unknown) => never){}
     async _caffeineStorageBlobIsLive(arg0: Uint8Array): Promise<boolean> {
@@ -476,18 +517,32 @@ export class Backend implements backendInterface {
             return result;
         }
     }
-    async getAssets(): Promise<Array<PersistentDigitalAsset>> {
+    async getAllDocumentsWithMetadata(): Promise<Array<DocumentMetadata>> {
         if (this.processError) {
             try {
-                const result = await this.actor.getAssets();
+                const result = await this.actor.getAllDocumentsWithMetadata();
                 return from_candid_vec_n25(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.getAssets();
+            const result = await this.actor.getAllDocumentsWithMetadata();
             return from_candid_vec_n25(this._uploadFile, this._downloadFile, result);
+        }
+    }
+    async getAssets(): Promise<Array<PersistentDigitalAsset>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getAssets();
+                return from_candid_vec_n35(this._uploadFile, this._downloadFile, result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getAssets();
+            return from_candid_vec_n35(this._uploadFile, this._downloadFile, result);
         }
     }
     async getCallerActivityLogs(): Promise<Array<PersistentActivityLog>> {
@@ -508,98 +563,112 @@ export class Backend implements backendInterface {
         if (this.processError) {
             try {
                 const result = await this.actor.getCallerUserProfile();
-                return from_candid_opt_n33(this._uploadFile, this._downloadFile, result);
+                return from_candid_opt_n42(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.getCallerUserProfile();
-            return from_candid_opt_n33(this._uploadFile, this._downloadFile, result);
+            return from_candid_opt_n42(this._uploadFile, this._downloadFile, result);
         }
     }
     async getCallerUserRole(): Promise<UserRole> {
         if (this.processError) {
             try {
                 const result = await this.actor.getCallerUserRole();
-                return from_candid_UserRole_n36(this._uploadFile, this._downloadFile, result);
+                return from_candid_UserRole_n45(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.getCallerUserRole();
-            return from_candid_UserRole_n36(this._uploadFile, this._downloadFile, result);
+            return from_candid_UserRole_n45(this._uploadFile, this._downloadFile, result);
         }
     }
     async getDeathVerificationRequests(): Promise<Array<PersistentDeathVerificationRequest>> {
         if (this.processError) {
             try {
                 const result = await this.actor.getDeathVerificationRequests();
-                return from_candid_vec_n38(this._uploadFile, this._downloadFile, result);
+                return from_candid_vec_n47(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.getDeathVerificationRequests();
-            return from_candid_vec_n38(this._uploadFile, this._downloadFile, result);
+            return from_candid_vec_n47(this._uploadFile, this._downloadFile, result);
         }
     }
     async getLegalVerification(): Promise<PersistentLegalVerification | null> {
         if (this.processError) {
             try {
                 const result = await this.actor.getLegalVerification();
-                return from_candid_opt_n44(this._uploadFile, this._downloadFile, result);
+                return from_candid_opt_n53(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.getLegalVerification();
-            return from_candid_opt_n44(this._uploadFile, this._downloadFile, result);
+            return from_candid_opt_n53(this._uploadFile, this._downloadFile, result);
         }
     }
     async getLegalVerificationForUser(arg0: Principal): Promise<PersistentLegalVerification | null> {
         if (this.processError) {
             try {
                 const result = await this.actor.getLegalVerificationForUser(arg0);
-                return from_candid_opt_n44(this._uploadFile, this._downloadFile, result);
+                return from_candid_opt_n53(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.getLegalVerificationForUser(arg0);
-            return from_candid_opt_n44(this._uploadFile, this._downloadFile, result);
+            return from_candid_opt_n53(this._uploadFile, this._downloadFile, result);
         }
     }
     async getNominees(): Promise<Array<PersistentNominee>> {
         if (this.processError) {
             try {
                 const result = await this.actor.getNominees();
-                return from_candid_vec_n48(this._uploadFile, this._downloadFile, result);
+                return from_candid_vec_n57(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.getNominees();
-            return from_candid_vec_n48(this._uploadFile, this._downloadFile, result);
+            return from_candid_vec_n57(this._uploadFile, this._downloadFile, result);
         }
     }
     async getUserProfile(arg0: Principal): Promise<PersistentUserProfile | null> {
         if (this.processError) {
             try {
                 const result = await this.actor.getUserProfile(arg0);
-                return from_candid_opt_n33(this._uploadFile, this._downloadFile, result);
+                return from_candid_opt_n42(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.getUserProfile(arg0);
-            return from_candid_opt_n33(this._uploadFile, this._downloadFile, result);
+            return from_candid_opt_n42(this._uploadFile, this._downloadFile, result);
+        }
+    }
+    async getUserSubmittedDocuments(): Promise<Array<DocumentMetadata>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getUserSubmittedDocuments();
+                return from_candid_vec_n25(this._uploadFile, this._downloadFile, result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getUserSubmittedDocuments();
+            return from_candid_vec_n25(this._uploadFile, this._downloadFile, result);
         }
     }
     async initiateLegalVerification(): Promise<void> {
@@ -648,14 +717,14 @@ export class Backend implements backendInterface {
         if (this.processError) {
             try {
                 const result = await this.actor.listApprovals();
-                return from_candid_vec_n55(this._uploadFile, this._downloadFile, result);
+                return from_candid_vec_n63(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.listApprovals();
-            return from_candid_vec_n55(this._uploadFile, this._downloadFile, result);
+            return from_candid_vec_n63(this._uploadFile, this._downloadFile, result);
         }
     }
     async recordAccessRelease(arg0: Principal, arg1: string): Promise<void> {
@@ -731,56 +800,70 @@ export class Backend implements backendInterface {
     async saveCallerUserProfile(arg0: PersistentUserProfile): Promise<void> {
         if (this.processError) {
             try {
-                const result = await this.actor.saveCallerUserProfile(await to_candid_PersistentUserProfile_n59(this._uploadFile, this._downloadFile, arg0));
+                const result = await this.actor.saveCallerUserProfile(await to_candid_PersistentUserProfile_n67(this._uploadFile, this._downloadFile, arg0));
                 return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.saveCallerUserProfile(await to_candid_PersistentUserProfile_n59(this._uploadFile, this._downloadFile, arg0));
+            const result = await this.actor.saveCallerUserProfile(await to_candid_PersistentUserProfile_n67(this._uploadFile, this._downloadFile, arg0));
             return result;
         }
     }
     async setApproval(arg0: Principal, arg1: ApprovalStatus): Promise<void> {
         if (this.processError) {
             try {
-                const result = await this.actor.setApproval(arg0, to_candid_ApprovalStatus_n61(this._uploadFile, this._downloadFile, arg1));
+                const result = await this.actor.setApproval(arg0, to_candid_ApprovalStatus_n69(this._uploadFile, this._downloadFile, arg1));
                 return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.setApproval(arg0, to_candid_ApprovalStatus_n61(this._uploadFile, this._downloadFile, arg1));
+            const result = await this.actor.setApproval(arg0, to_candid_ApprovalStatus_n69(this._uploadFile, this._downloadFile, arg1));
             return result;
         }
     }
     async setNomineeVerificationStatus(arg0: Principal, arg1: bigint, arg2: PersistentVerificationStatus): Promise<void> {
         if (this.processError) {
             try {
-                const result = await this.actor.setNomineeVerificationStatus(arg0, arg1, to_candid_PersistentVerificationStatus_n63(this._uploadFile, this._downloadFile, arg2));
+                const result = await this.actor.setNomineeVerificationStatus(arg0, arg1, to_candid_PersistentVerificationStatus_n71(this._uploadFile, this._downloadFile, arg2));
                 return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.setNomineeVerificationStatus(arg0, arg1, to_candid_PersistentVerificationStatus_n63(this._uploadFile, this._downloadFile, arg2));
+            const result = await this.actor.setNomineeVerificationStatus(arg0, arg1, to_candid_PersistentVerificationStatus_n71(this._uploadFile, this._downloadFile, arg2));
             return result;
         }
     }
     async submitDeathVerificationRequest(arg0: string, arg1: string, arg2: string, arg3: string, arg4: Uint8Array, arg5: Uint8Array, arg6: Uint8Array | null): Promise<bigint> {
         if (this.processError) {
             try {
-                const result = await this.actor.submitDeathVerificationRequest(arg0, arg1, arg2, arg3, arg4, arg5, to_candid_opt_n65(this._uploadFile, this._downloadFile, arg6));
+                const result = await this.actor.submitDeathVerificationRequest(arg0, arg1, arg2, arg3, arg4, arg5, to_candid_opt_n73(this._uploadFile, this._downloadFile, arg6));
                 return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.submitDeathVerificationRequest(arg0, arg1, arg2, arg3, arg4, arg5, to_candid_opt_n65(this._uploadFile, this._downloadFile, arg6));
+            const result = await this.actor.submitDeathVerificationRequest(arg0, arg1, arg2, arg3, arg4, arg5, to_candid_opt_n73(this._uploadFile, this._downloadFile, arg6));
+            return result;
+        }
+    }
+    async submitDocument(arg0: DocumentType, arg1: ExternalBlob): Promise<bigint> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.submitDocument(to_candid_DocumentType_n74(this._uploadFile, this._downloadFile, arg0), await to_candid_ExternalBlob_n12(this._uploadFile, this._downloadFile, arg1));
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.submitDocument(to_candid_DocumentType_n74(this._uploadFile, this._downloadFile, arg0), await to_candid_ExternalBlob_n12(this._uploadFile, this._downloadFile, arg1));
             return result;
         }
     }
@@ -801,20 +884,43 @@ export class Backend implements backendInterface {
     async updateDeathVerificationStatus(arg0: bigint, arg1: Variant_Approved_Rejected): Promise<void> {
         if (this.processError) {
             try {
-                const result = await this.actor.updateDeathVerificationStatus(arg0, to_candid_variant_n66(this._uploadFile, this._downloadFile, arg1));
+                const result = await this.actor.updateDeathVerificationStatus(arg0, to_candid_variant_n76(this._uploadFile, this._downloadFile, arg1));
                 return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.updateDeathVerificationStatus(arg0, to_candid_variant_n66(this._uploadFile, this._downloadFile, arg1));
+            const result = await this.actor.updateDeathVerificationStatus(arg0, to_candid_variant_n76(this._uploadFile, this._downloadFile, arg1));
+            return result;
+        }
+    }
+    async verifyDocument(arg0: bigint, arg1: boolean, arg2: string | null): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.verifyDocument(arg0, arg1, to_candid_opt_n77(this._uploadFile, this._downloadFile, arg2));
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.verifyDocument(arg0, arg1, to_candid_opt_n77(this._uploadFile, this._downloadFile, arg2));
             return result;
         }
     }
 }
-function from_candid_ApprovalStatus_n58(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _ApprovalStatus): ApprovalStatus {
-    return from_candid_variant_n47(_uploadFile, _downloadFile, value);
+function from_candid_ApprovalStatus_n66(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _ApprovalStatus): ApprovalStatus {
+    return from_candid_variant_n56(_uploadFile, _downloadFile, value);
+}
+async function from_candid_DocumentMetadata_n26(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _DocumentMetadata): Promise<DocumentMetadata> {
+    return await from_candid_record_n27(_uploadFile, _downloadFile, value);
+}
+function from_candid_DocumentStatus_n28(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _DocumentStatus): DocumentStatus {
+    return from_candid_variant_n29(_uploadFile, _downloadFile, value);
+}
+function from_candid_DocumentType_n33(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _DocumentType): DocumentType {
+    return from_candid_variant_n34(_uploadFile, _downloadFile, value);
 }
 async function from_candid_ExternalBlob_n30(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _ExternalBlob): Promise<ExternalBlob> {
     return await _downloadFile(value);
@@ -822,41 +928,41 @@ async function from_candid_ExternalBlob_n30(_uploadFile: (file: ExternalBlob) =>
 function from_candid_PersistentAccountState_n22(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _PersistentAccountState): PersistentAccountState {
     return from_candid_record_n23(_uploadFile, _downloadFile, value);
 }
-function from_candid_PersistentCategory_n31(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _PersistentCategory): PersistentCategory {
-    return from_candid_variant_n32(_uploadFile, _downloadFile, value);
+function from_candid_PersistentCategory_n40(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _PersistentCategory): PersistentCategory {
+    return from_candid_variant_n41(_uploadFile, _downloadFile, value);
 }
-function from_candid_PersistentDeathVerificationRequest_n39(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _PersistentDeathVerificationRequest): PersistentDeathVerificationRequest {
-    return from_candid_record_n40(_uploadFile, _downloadFile, value);
+function from_candid_PersistentDeathVerificationRequest_n48(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _PersistentDeathVerificationRequest): PersistentDeathVerificationRequest {
+    return from_candid_record_n49(_uploadFile, _downloadFile, value);
 }
-function from_candid_PersistentDeathVerificationStatus_n41(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _PersistentDeathVerificationStatus): PersistentDeathVerificationStatus {
-    return from_candid_variant_n42(_uploadFile, _downloadFile, value);
+function from_candid_PersistentDeathVerificationStatus_n50(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _PersistentDeathVerificationStatus): PersistentDeathVerificationStatus {
+    return from_candid_variant_n51(_uploadFile, _downloadFile, value);
 }
-async function from_candid_PersistentDigitalAsset_n26(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _PersistentDigitalAsset): Promise<PersistentDigitalAsset> {
-    return await from_candid_record_n27(_uploadFile, _downloadFile, value);
+async function from_candid_PersistentDigitalAsset_n36(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _PersistentDigitalAsset): Promise<PersistentDigitalAsset> {
+    return await from_candid_record_n37(_uploadFile, _downloadFile, value);
 }
-async function from_candid_PersistentEncryptedData_n28(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _PersistentEncryptedData): Promise<PersistentEncryptedData> {
-    return await from_candid_record_n29(_uploadFile, _downloadFile, value);
+async function from_candid_PersistentEncryptedData_n38(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _PersistentEncryptedData): Promise<PersistentEncryptedData> {
+    return await from_candid_record_n39(_uploadFile, _downloadFile, value);
 }
-function from_candid_PersistentLegalVerification_n45(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _PersistentLegalVerification): PersistentLegalVerification {
-    return from_candid_record_n46(_uploadFile, _downloadFile, value);
+function from_candid_PersistentLegalVerification_n54(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _PersistentLegalVerification): PersistentLegalVerification {
+    return from_candid_record_n55(_uploadFile, _downloadFile, value);
 }
-async function from_candid_PersistentNominee_n49(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _PersistentNominee): Promise<PersistentNominee> {
-    return await from_candid_record_n50(_uploadFile, _downloadFile, value);
+async function from_candid_PersistentNominee_n58(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _PersistentNominee): Promise<PersistentNominee> {
+    return await from_candid_record_n59(_uploadFile, _downloadFile, value);
 }
-function from_candid_PersistentRelationship_n51(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _PersistentRelationship): PersistentRelationship {
-    return from_candid_variant_n52(_uploadFile, _downloadFile, value);
+function from_candid_PersistentRelationship_n60(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _PersistentRelationship): PersistentRelationship {
+    return from_candid_variant_n61(_uploadFile, _downloadFile, value);
 }
-async function from_candid_PersistentUserProfile_n34(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _PersistentUserProfile): Promise<PersistentUserProfile> {
-    return await from_candid_record_n35(_uploadFile, _downloadFile, value);
+async function from_candid_PersistentUserProfile_n43(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _PersistentUserProfile): Promise<PersistentUserProfile> {
+    return await from_candid_record_n44(_uploadFile, _downloadFile, value);
 }
-function from_candid_PersistentVerificationStatus_n53(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _PersistentVerificationStatus): PersistentVerificationStatus {
-    return from_candid_variant_n54(_uploadFile, _downloadFile, value);
+function from_candid_PersistentVerificationStatus_n62(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _PersistentVerificationStatus): PersistentVerificationStatus {
+    return from_candid_variant_n29(_uploadFile, _downloadFile, value);
 }
-function from_candid_UserApprovalInfo_n56(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _UserApprovalInfo): UserApprovalInfo {
-    return from_candid_record_n57(_uploadFile, _downloadFile, value);
+function from_candid_UserApprovalInfo_n64(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _UserApprovalInfo): UserApprovalInfo {
+    return from_candid_record_n65(_uploadFile, _downloadFile, value);
 }
-function from_candid_UserRole_n36(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _UserRole): UserRole {
-    return from_candid_variant_n37(_uploadFile, _downloadFile, value);
+function from_candid_UserRole_n45(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _UserRole): UserRole {
+    return from_candid_variant_n46(_uploadFile, _downloadFile, value);
 }
 function from_candid__CaffeineStorageRefillResult_n4(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: __CaffeineStorageRefillResult): _CaffeineStorageRefillResult {
     return from_candid_record_n5(_uploadFile, _downloadFile, value);
@@ -867,14 +973,20 @@ function from_candid_opt_n21(_uploadFile: (file: ExternalBlob) => Promise<Uint8A
 function from_candid_opt_n24(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_Time]): Time | null {
     return value.length === 0 ? null : value[0];
 }
-async function from_candid_opt_n33(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_PersistentUserProfile]): Promise<PersistentUserProfile | null> {
-    return value.length === 0 ? null : await from_candid_PersistentUserProfile_n34(_uploadFile, _downloadFile, value[0]);
-}
-function from_candid_opt_n43(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [Uint8Array]): Uint8Array | null {
+function from_candid_opt_n31(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [Principal]): Principal | null {
     return value.length === 0 ? null : value[0];
 }
-function from_candid_opt_n44(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_PersistentLegalVerification]): PersistentLegalVerification | null {
-    return value.length === 0 ? null : from_candid_PersistentLegalVerification_n45(_uploadFile, _downloadFile, value[0]);
+function from_candid_opt_n32(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [string]): string | null {
+    return value.length === 0 ? null : value[0];
+}
+async function from_candid_opt_n42(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_PersistentUserProfile]): Promise<PersistentUserProfile | null> {
+    return value.length === 0 ? null : await from_candid_PersistentUserProfile_n43(_uploadFile, _downloadFile, value[0]);
+}
+function from_candid_opt_n52(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [Uint8Array]): Uint8Array | null {
+    return value.length === 0 ? null : value[0];
+}
+function from_candid_opt_n53(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_PersistentLegalVerification]): PersistentLegalVerification | null {
+    return value.length === 0 ? null : from_candid_PersistentLegalVerification_n54(_uploadFile, _downloadFile, value[0]);
 }
 function from_candid_opt_n6(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [boolean]): boolean | null {
     return value.length === 0 ? null : value[0];
@@ -895,6 +1007,39 @@ function from_candid_record_n23(_uploadFile: (file: ExternalBlob) => Promise<Uin
     };
 }
 async function from_candid_record_n27(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    id: bigint;
+    status: _DocumentStatus;
+    verificationTime: [] | [_Time];
+    submitter: Principal;
+    blob: _ExternalBlob;
+    adminVerifier: [] | [Principal];
+    adminNote: [] | [string];
+    timestamp: _Time;
+    docType: _DocumentType;
+}): Promise<{
+    id: bigint;
+    status: DocumentStatus;
+    verificationTime?: Time;
+    submitter: Principal;
+    blob: ExternalBlob;
+    adminVerifier?: Principal;
+    adminNote?: string;
+    timestamp: Time;
+    docType: DocumentType;
+}> {
+    return {
+        id: value.id,
+        status: from_candid_DocumentStatus_n28(_uploadFile, _downloadFile, value.status),
+        verificationTime: record_opt_to_undefined(from_candid_opt_n24(_uploadFile, _downloadFile, value.verificationTime)),
+        submitter: value.submitter,
+        blob: await from_candid_ExternalBlob_n30(_uploadFile, _downloadFile, value.blob),
+        adminVerifier: record_opt_to_undefined(from_candid_opt_n31(_uploadFile, _downloadFile, value.adminVerifier)),
+        adminNote: record_opt_to_undefined(from_candid_opt_n32(_uploadFile, _downloadFile, value.adminNote)),
+        timestamp: value.timestamp,
+        docType: from_candid_DocumentType_n33(_uploadFile, _downloadFile, value.docType)
+    };
+}
+async function from_candid_record_n37(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     encryptedPassword: _PersistentEncryptedData;
     username: string;
     platform: string;
@@ -906,13 +1051,13 @@ async function from_candid_record_n27(_uploadFile: (file: ExternalBlob) => Promi
     category: PersistentCategory;
 }> {
     return {
-        encryptedPassword: await from_candid_PersistentEncryptedData_n28(_uploadFile, _downloadFile, value.encryptedPassword),
+        encryptedPassword: await from_candid_PersistentEncryptedData_n38(_uploadFile, _downloadFile, value.encryptedPassword),
         username: value.username,
         platform: value.platform,
-        category: from_candid_PersistentCategory_n31(_uploadFile, _downloadFile, value.category)
+        category: from_candid_PersistentCategory_n40(_uploadFile, _downloadFile, value.category)
     };
 }
-async function from_candid_record_n29(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+async function from_candid_record_n39(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     blob: _ExternalBlob;
     size: bigint;
 }): Promise<{
@@ -924,7 +1069,7 @@ async function from_candid_record_n29(_uploadFile: (file: ExternalBlob) => Promi
         size: value.size
     };
 }
-async function from_candid_record_n35(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+async function from_candid_record_n44(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     name: string;
     encryptedData: _PersistentEncryptedData;
 }): Promise<{
@@ -933,10 +1078,10 @@ async function from_candid_record_n35(_uploadFile: (file: ExternalBlob) => Promi
 }> {
     return {
         name: value.name,
-        encryptedData: await from_candid_PersistentEncryptedData_n28(_uploadFile, _downloadFile, value.encryptedData)
+        encryptedData: await from_candid_PersistentEncryptedData_n38(_uploadFile, _downloadFile, value.encryptedData)
     };
 }
-function from_candid_record_n40(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+function from_candid_record_n49(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     status: _PersistentDeathVerificationStatus;
     requestId: bigint;
     governmentIdBlob: Uint8Array;
@@ -960,34 +1105,16 @@ function from_candid_record_n40(_uploadFile: (file: ExternalBlob) => Promise<Uin
     deceasedEmail: string;
 } {
     return {
-        status: from_candid_PersistentDeathVerificationStatus_n41(_uploadFile, _downloadFile, value.status),
+        status: from_candid_PersistentDeathVerificationStatus_n50(_uploadFile, _downloadFile, value.status),
         requestId: value.requestId,
         governmentIdBlob: value.governmentIdBlob,
         submittedAt: value.submittedAt,
         deathCertificateBlob: value.deathCertificateBlob,
         heirFullName: value.heirFullName,
-        relationshipProofBlob: record_opt_to_undefined(from_candid_opt_n43(_uploadFile, _downloadFile, value.relationshipProofBlob)),
+        relationshipProofBlob: record_opt_to_undefined(from_candid_opt_n52(_uploadFile, _downloadFile, value.relationshipProofBlob)),
         deceasedFullName: value.deceasedFullName,
         relationshipToDeceased: value.relationshipToDeceased,
         deceasedEmail: value.deceasedEmail
-    };
-}
-function from_candid_record_n46(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
-    status: {
-        pending: null;
-    } | {
-        approved: null;
-    } | {
-        rejected: null;
-    };
-    auditTrail: Array<string>;
-}): {
-    status: Variant_pending_approved_rejected;
-    auditTrail: Array<string>;
-} {
-    return {
-        status: from_candid_variant_n47(_uploadFile, _downloadFile, value.status),
-        auditTrail: value.auditTrail
     };
 }
 function from_candid_record_n5(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
@@ -1002,7 +1129,25 @@ function from_candid_record_n5(_uploadFile: (file: ExternalBlob) => Promise<Uint
         topped_up_amount: record_opt_to_undefined(from_candid_opt_n7(_uploadFile, _downloadFile, value.topped_up_amount))
     };
 }
-async function from_candid_record_n50(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+function from_candid_record_n55(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    status: {
+        pending: null;
+    } | {
+        approved: null;
+    } | {
+        rejected: null;
+    };
+    auditTrail: Array<string>;
+}): {
+    status: Variant_pending_approved_rejected;
+    auditTrail: Array<string>;
+} {
+    return {
+        status: from_candid_variant_n56(_uploadFile, _downloadFile, value.status),
+        auditTrail: value.auditTrail
+    };
+}
+async function from_candid_record_n59(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     relationship: _PersistentRelationship;
     name: string;
     idProof: _PersistentEncryptedData;
@@ -1014,13 +1159,13 @@ async function from_candid_record_n50(_uploadFile: (file: ExternalBlob) => Promi
     verificationStatus: PersistentVerificationStatus;
 }> {
     return {
-        relationship: from_candid_PersistentRelationship_n51(_uploadFile, _downloadFile, value.relationship),
+        relationship: from_candid_PersistentRelationship_n60(_uploadFile, _downloadFile, value.relationship),
         name: value.name,
-        idProof: await from_candid_PersistentEncryptedData_n28(_uploadFile, _downloadFile, value.idProof),
-        verificationStatus: from_candid_PersistentVerificationStatus_n53(_uploadFile, _downloadFile, value.verificationStatus)
+        idProof: await from_candid_PersistentEncryptedData_n38(_uploadFile, _downloadFile, value.idProof),
+        verificationStatus: from_candid_PersistentVerificationStatus_n62(_uploadFile, _downloadFile, value.verificationStatus)
     };
 }
-function from_candid_record_n57(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+function from_candid_record_n65(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     status: _ApprovalStatus;
     principal: Principal;
 }): {
@@ -1028,11 +1173,29 @@ function from_candid_record_n57(_uploadFile: (file: ExternalBlob) => Promise<Uin
     principal: Principal;
 } {
     return {
-        status: from_candid_ApprovalStatus_n58(_uploadFile, _downloadFile, value.status),
+        status: from_candid_ApprovalStatus_n66(_uploadFile, _downloadFile, value.status),
         principal: value.principal
     };
 }
-function from_candid_variant_n32(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+function from_candid_variant_n29(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    verified: null;
+} | {
+    pending: null;
+} | {
+    rejected: null;
+}): PersistentVerificationStatus {
+    return "verified" in value ? PersistentVerificationStatus.verified : "pending" in value ? PersistentVerificationStatus.pending : "rejected" in value ? PersistentVerificationStatus.rejected : value;
+}
+function from_candid_variant_n34(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    idProof: null;
+} | {
+    deathCertificate: null;
+} | {
+    relationshipProof: null;
+}): DocumentType {
+    return "idProof" in value ? DocumentType.idProof : "deathCertificate" in value ? DocumentType.deathCertificate : "relationshipProof" in value ? DocumentType.relationshipProof : value;
+}
+function from_candid_variant_n41(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     other: null;
 } | {
     cloud: null;
@@ -1045,7 +1208,7 @@ function from_candid_variant_n32(_uploadFile: (file: ExternalBlob) => Promise<Ui
 }): PersistentCategory {
     return "other" in value ? PersistentCategory.other : "cloud" in value ? PersistentCategory.cloud : "banking" in value ? PersistentCategory.banking : "crypto" in value ? PersistentCategory.crypto : "socialMedia" in value ? PersistentCategory.socialMedia : value;
 }
-function from_candid_variant_n37(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+function from_candid_variant_n46(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     admin: null;
 } | {
     user: null;
@@ -1054,7 +1217,7 @@ function from_candid_variant_n37(_uploadFile: (file: ExternalBlob) => Promise<Ui
 }): UserRole {
     return "admin" in value ? UserRole.admin : "user" in value ? UserRole.user : "guest" in value ? UserRole.guest : value;
 }
-function from_candid_variant_n42(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+function from_candid_variant_n51(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     PendingVerification: null;
 } | {
     Approved: null;
@@ -1063,7 +1226,7 @@ function from_candid_variant_n42(_uploadFile: (file: ExternalBlob) => Promise<Ui
 }): PersistentDeathVerificationStatus {
     return "PendingVerification" in value ? PersistentDeathVerificationStatus.PendingVerification : "Approved" in value ? PersistentDeathVerificationStatus.Approved : "Rejected" in value ? PersistentDeathVerificationStatus.Rejected : value;
 }
-function from_candid_variant_n47(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+function from_candid_variant_n56(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     pending: null;
 } | {
     approved: null;
@@ -1072,7 +1235,7 @@ function from_candid_variant_n47(_uploadFile: (file: ExternalBlob) => Promise<Ui
 }): Variant_pending_approved_rejected {
     return "pending" in value ? Variant_pending_approved_rejected.pending : "approved" in value ? Variant_pending_approved_rejected.approved : "rejected" in value ? Variant_pending_approved_rejected.rejected : value;
 }
-function from_candid_variant_n52(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+function from_candid_variant_n61(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     legalRepresentative: null;
 } | {
     other: null;
@@ -1085,29 +1248,26 @@ function from_candid_variant_n52(_uploadFile: (file: ExternalBlob) => Promise<Ui
 }): PersistentRelationship {
     return "legalRepresentative" in value ? PersistentRelationship.legalRepresentative : "other" in value ? PersistentRelationship.other : "child" in value ? PersistentRelationship.child : "sibling" in value ? PersistentRelationship.sibling : "spouse" in value ? PersistentRelationship.spouse : value;
 }
-function from_candid_variant_n54(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
-    verified: null;
-} | {
-    pending: null;
-} | {
-    rejected: null;
-}): PersistentVerificationStatus {
-    return "verified" in value ? PersistentVerificationStatus.verified : "pending" in value ? PersistentVerificationStatus.pending : "rejected" in value ? PersistentVerificationStatus.rejected : value;
+async function from_candid_vec_n25(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Array<_DocumentMetadata>): Promise<Array<DocumentMetadata>> {
+    return await Promise.all(value.map(async (x)=>await from_candid_DocumentMetadata_n26(_uploadFile, _downloadFile, x)));
 }
-async function from_candid_vec_n25(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Array<_PersistentDigitalAsset>): Promise<Array<PersistentDigitalAsset>> {
-    return await Promise.all(value.map(async (x)=>await from_candid_PersistentDigitalAsset_n26(_uploadFile, _downloadFile, x)));
+async function from_candid_vec_n35(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Array<_PersistentDigitalAsset>): Promise<Array<PersistentDigitalAsset>> {
+    return await Promise.all(value.map(async (x)=>await from_candid_PersistentDigitalAsset_n36(_uploadFile, _downloadFile, x)));
 }
-function from_candid_vec_n38(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Array<_PersistentDeathVerificationRequest>): Array<PersistentDeathVerificationRequest> {
-    return value.map((x)=>from_candid_PersistentDeathVerificationRequest_n39(_uploadFile, _downloadFile, x));
+function from_candid_vec_n47(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Array<_PersistentDeathVerificationRequest>): Array<PersistentDeathVerificationRequest> {
+    return value.map((x)=>from_candid_PersistentDeathVerificationRequest_n48(_uploadFile, _downloadFile, x));
 }
-async function from_candid_vec_n48(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Array<_PersistentNominee>): Promise<Array<PersistentNominee>> {
-    return await Promise.all(value.map(async (x)=>await from_candid_PersistentNominee_n49(_uploadFile, _downloadFile, x)));
+async function from_candid_vec_n57(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Array<_PersistentNominee>): Promise<Array<PersistentNominee>> {
+    return await Promise.all(value.map(async (x)=>await from_candid_PersistentNominee_n58(_uploadFile, _downloadFile, x)));
 }
-function from_candid_vec_n55(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Array<_UserApprovalInfo>): Array<UserApprovalInfo> {
-    return value.map((x)=>from_candid_UserApprovalInfo_n56(_uploadFile, _downloadFile, x));
+function from_candid_vec_n63(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Array<_UserApprovalInfo>): Array<UserApprovalInfo> {
+    return value.map((x)=>from_candid_UserApprovalInfo_n64(_uploadFile, _downloadFile, x));
 }
-function to_candid_ApprovalStatus_n61(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: ApprovalStatus): _ApprovalStatus {
-    return to_candid_variant_n62(_uploadFile, _downloadFile, value);
+function to_candid_ApprovalStatus_n69(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: ApprovalStatus): _ApprovalStatus {
+    return to_candid_variant_n70(_uploadFile, _downloadFile, value);
+}
+function to_candid_DocumentType_n74(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: DocumentType): _DocumentType {
+    return to_candid_variant_n75(_uploadFile, _downloadFile, value);
 }
 async function to_candid_ExternalBlob_n12(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: ExternalBlob): Promise<_ExternalBlob> {
     return await _uploadFile(value);
@@ -1127,11 +1287,11 @@ async function to_candid_PersistentNomineeInput_n15(_uploadFile: (file: External
 function to_candid_PersistentRelationship_n17(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: PersistentRelationship): _PersistentRelationship {
     return to_candid_variant_n18(_uploadFile, _downloadFile, value);
 }
-async function to_candid_PersistentUserProfile_n59(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: PersistentUserProfile): Promise<_PersistentUserProfile> {
-    return await to_candid_record_n60(_uploadFile, _downloadFile, value);
+async function to_candid_PersistentUserProfile_n67(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: PersistentUserProfile): Promise<_PersistentUserProfile> {
+    return await to_candid_record_n68(_uploadFile, _downloadFile, value);
 }
-function to_candid_PersistentVerificationStatus_n63(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: PersistentVerificationStatus): _PersistentVerificationStatus {
-    return to_candid_variant_n64(_uploadFile, _downloadFile, value);
+function to_candid_PersistentVerificationStatus_n71(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: PersistentVerificationStatus): _PersistentVerificationStatus {
+    return to_candid_variant_n72(_uploadFile, _downloadFile, value);
 }
 function to_candid_UserRole_n19(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: UserRole): _UserRole {
     return to_candid_variant_n20(_uploadFile, _downloadFile, value);
@@ -1142,7 +1302,10 @@ function to_candid__CaffeineStorageRefillInformation_n2(_uploadFile: (file: Exte
 function to_candid_opt_n1(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _CaffeineStorageRefillInformation | null): [] | [__CaffeineStorageRefillInformation] {
     return value === null ? candid_none() : candid_some(to_candid__CaffeineStorageRefillInformation_n2(_uploadFile, _downloadFile, value));
 }
-function to_candid_opt_n65(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Uint8Array | null): [] | [Uint8Array] {
+function to_candid_opt_n73(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Uint8Array | null): [] | [Uint8Array] {
+    return value === null ? candid_none() : candid_some(value);
+}
+function to_candid_opt_n77(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: string | null): [] | [string] {
     return value === null ? candid_none() : candid_some(value);
 }
 async function to_candid_record_n11(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
@@ -1181,7 +1344,7 @@ function to_candid_record_n3(_uploadFile: (file: ExternalBlob) => Promise<Uint8A
         proposed_top_up_amount: value.proposed_top_up_amount ? candid_some(value.proposed_top_up_amount) : candid_none()
     };
 }
-async function to_candid_record_n60(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+async function to_candid_record_n68(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     name: string;
     encryptedData: PersistentEncryptedData;
 }): Promise<{
@@ -1272,7 +1435,7 @@ function to_candid_variant_n20(_uploadFile: (file: ExternalBlob) => Promise<Uint
         guest: null
     } : value;
 }
-function to_candid_variant_n62(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Variant_pending_approved_rejected): {
+function to_candid_variant_n70(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Variant_pending_approved_rejected): {
     pending: null;
 } | {
     approved: null;
@@ -1287,7 +1450,7 @@ function to_candid_variant_n62(_uploadFile: (file: ExternalBlob) => Promise<Uint
         rejected: null
     } : value;
 }
-function to_candid_variant_n64(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: PersistentVerificationStatus): {
+function to_candid_variant_n72(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: PersistentVerificationStatus): {
     verified: null;
 } | {
     pending: null;
@@ -1302,7 +1465,22 @@ function to_candid_variant_n64(_uploadFile: (file: ExternalBlob) => Promise<Uint
         rejected: null
     } : value;
 }
-function to_candid_variant_n66(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Variant_Approved_Rejected): {
+function to_candid_variant_n75(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: DocumentType): {
+    idProof: null;
+} | {
+    deathCertificate: null;
+} | {
+    relationshipProof: null;
+} {
+    return value == DocumentType.idProof ? {
+        idProof: null
+    } : value == DocumentType.deathCertificate ? {
+        deathCertificate: null
+    } : value == DocumentType.relationshipProof ? {
+        relationshipProof: null
+    } : value;
+}
+function to_candid_variant_n76(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Variant_Approved_Rejected): {
     Approved: null;
 } | {
     Rejected: null;

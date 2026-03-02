@@ -1,378 +1,253 @@
-import { useRouter } from '@tanstack/react-router';
-import { Shield, Lock, FileCheck, Users, Activity, Cpu, Globe, Heart, AlertTriangle, CheckCircle, FileText } from 'lucide-react';
+import React from 'react';
+import { useNavigate } from '@tanstack/react-router';
+import { Shield, Lock, Users, FileCheck, ArrowRight, CheckCircle, Globe, Heart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 
 export default function LandingPage() {
-  const router = useRouter();
+  const navigate = useNavigate();
+
+  const features = [
+    {
+      icon: <Lock className="h-6 w-6 text-primary" />,
+      title: 'Military-Grade Encryption',
+      description: 'Your digital assets are encrypted with AES-256 before being stored on the blockchain.',
+    },
+    {
+      icon: <Users className="h-6 w-6 text-accent" />,
+      title: 'Nominee Management',
+      description: 'Designate trusted individuals who will receive access to your digital legacy.',
+    },
+    {
+      icon: <FileCheck className="h-6 w-6 text-gold" />,
+      title: 'Legal Verification',
+      description: 'Robust legal verification process ensures only authorized heirs gain access.',
+    },
+    {
+      icon: <Globe className="h-6 w-6 text-primary" />,
+      title: 'Blockchain Secured',
+      description: 'Built on the Internet Computer Protocol for immutable, decentralized storage.',
+    },
+  ];
+
+  const steps = [
+    { step: '01', title: 'Create Your Vault', description: 'Register and set up your encrypted digital legacy vault.' },
+    { step: '02', title: 'Add Your Assets', description: 'Securely store passwords, crypto keys, and digital accounts.' },
+    { step: '03', title: 'Designate Nominees', description: 'Choose trusted heirs and upload their verification documents.' },
+    { step: '04', title: 'Protected Forever', description: 'Your legacy is secured and will be released only when verified.' },
+  ];
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-background">
       {/* Hero Section */}
-      <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden">
-        <div
-          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-          style={{ backgroundImage: 'url(/assets/generated/hero-bg.dim_1440x800.png)' }}
-        />
-        <div className="absolute inset-0 hero-gradient opacity-90" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_rgba(99,102,241,0.15)_0%,_transparent_70%)]" />
-
-        {/* Floating security icons */}
-        <div className="absolute top-20 left-10 opacity-10 animate-pulse">
-          <Shield size={80} className="text-white" />
-        </div>
-        <div className="absolute bottom-20 right-10 opacity-10 animate-pulse" style={{ animationDelay: '1s' }}>
-          <Lock size={60} className="text-white" />
-        </div>
-
-        <div className="relative z-10 text-center px-4 max-w-4xl mx-auto">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 border border-white/20 text-white/80 text-sm font-medium mb-8 backdrop-blur-sm">
-            <Shield size={14} />
-            Blockchain-Secured Digital Estate Planning
-          </div>
-          <h1 className="font-display text-5xl md:text-7xl font-bold text-white mb-6 leading-tight">
-            Secure Today.
-            <br />
-            <span className="text-gradient">Protected Forever.</span>
-          </h1>
-          <p className="text-xl text-navy-200 mb-10 max-w-2xl mx-auto leading-relaxed">
-            The world's first decentralized digital inheritance platform. Store your encrypted credentials and release them only after verified legal death confirmation.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button
-              size="lg"
-              onClick={() => router.navigate({ to: '/register' })}
-              className="bg-white text-navy-900 hover:bg-navy-50 font-semibold px-8 py-6 text-base shadow-glow transition-smooth"
-            >
-              <Shield size={18} className="mr-2" />
-              Create Legacy Plan
-            </Button>
-            <Button
-              size="lg"
-              variant="outline"
-              onClick={() => router.navigate({ to: '/login' })}
-              className="border-white/40 text-white hover:bg-white/10 font-semibold px-8 py-6 text-base backdrop-blur-sm transition-smooth"
-            >
-              <Lock size={18} className="mr-2" />
-              Login
-            </Button>
-          </div>
-
-          {/* Trust indicators */}
-          <div className="mt-12 flex flex-wrap justify-center gap-6 text-white/60 text-sm">
-            <span className="flex items-center gap-1.5"><Cpu size={14} /> AES-256 Encrypted</span>
-            <span className="flex items-center gap-1.5"><Shield size={14} /> Blockchain Secured</span>
-            <span className="flex items-center gap-1.5"><Lock size={14} /> Zero-Knowledge Privacy</span>
-          </div>
-        </div>
-      </section>
-
-      {/* Heir Verification CTA */}
-      <section className="py-12 px-4 bg-navy-900">
-        <div className="max-w-4xl mx-auto">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-6 p-6 rounded-2xl bg-navy-800 border border-navy-600">
-            <div className="flex items-start gap-4">
-              <div className="p-3 bg-amber-500/15 rounded-xl flex-shrink-0">
-                <FileText size={24} className="text-amber-400" />
-              </div>
-              <div>
-                <h3 className="font-display font-bold text-white text-lg mb-1">
-                  Are You a Nominated Heir?
-                </h3>
-                <p className="text-navy-300 text-sm leading-relaxed max-w-md">
-                  If you are the heir of a deceased user and need to request access to their digital vault, submit a formal verification request with the required legal documents.
-                </p>
-              </div>
+      <section className="relative overflow-hidden hero-gradient">
+        <div className="absolute inset-0 bg-gradient-to-b from-primary/5 via-transparent to-transparent pointer-events-none" />
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-24 md:py-36">
+          <div className="text-center max-w-4xl mx-auto">
+            <div className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-1.5 text-sm text-primary mb-8">
+              <Shield className="h-4 w-4" />
+              <span>Blockchain-Powered Digital Legacy Protection</span>
             </div>
-            <Button
-              onClick={() => router.navigate({ to: '/death-verification-request' })}
-              className="bg-amber-500 hover:bg-amber-400 text-navy-900 font-semibold gap-2 whitespace-nowrap flex-shrink-0"
-              size="lg"
-            >
-              <FileText size={18} />
-              Submit Heir Verification
-            </Button>
+            <h1 className="text-5xl md:text-7xl font-bold tracking-tight mb-6">
+              <span className="text-foreground">Dead Man's</span>
+              <br />
+              <span className="gradient-text">Switch</span>
+            </h1>
+            <p className="text-xl md:text-2xl text-muted-foreground mb-4 font-medium">
+              Secure Today. Protected Forever.
+            </p>
+            <p className="text-base md:text-lg text-muted-foreground mb-10 max-w-2xl mx-auto">
+              Protect your digital assets and ensure your loved ones receive your digital legacy
+              exactly as you intended — securely, privately, and on your terms.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Button
+                size="lg"
+                onClick={() => navigate({ to: '/login' })}
+                className="gap-2 text-base px-8"
+              >
+                Secure Your Legacy
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+              <Button
+                size="lg"
+                variant="outline"
+                onClick={() => navigate({ to: '/death-verification-request' })}
+                className="gap-2 text-base px-8"
+              >
+                I'm a Nominated Heir
+              </Button>
+            </div>
           </div>
         </div>
       </section>
 
       {/* Problem Statement */}
-      <section className="py-20 px-4 bg-white">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-14">
-            <span className="text-primary text-sm font-semibold uppercase tracking-widest">The Problem</span>
-            <h2 className="font-display text-4xl font-bold text-navy-900 mt-3 mb-4">
-              Digital Assets Die With You
+      <section className="py-20 section-gradient">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
+              The Digital Legacy Problem
             </h2>
-            <p className="text-navy-500 text-lg max-w-2xl mx-auto">
-              Billions of dollars in digital assets are lost every year because there's no secure way to pass them on.
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              Billions of dollars in digital assets are lost every year because there's no secure
+              way to pass them on. Dead Man's Switch solves this.
             </p>
           </div>
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {[
-              {
-                icon: <AlertTriangle className="text-amber-500" size={32} />,
-                title: '$140B+ Lost Annually',
-                desc: 'Digital assets including crypto, cloud accounts, and financial credentials become inaccessible after death.',
-              },
-              {
-                icon: <Lock className="text-red-500" size={32} />,
-                title: 'No Secure Transfer Method',
-                desc: 'Sharing passwords before death creates security risks. Not sharing them means permanent loss.',
-              },
-              {
-                icon: <Users className="text-navy-500" size={32} />,
-                title: 'Families Left Helpless',
-                desc: 'Loved ones struggle for years to access accounts, losing memories, money, and digital legacies.',
-              },
-            ].map((item, i) => (
-              <div key={i} className="p-6 rounded-2xl border border-navy-100 bg-navy-50/50 hover:shadow-card-hover transition-smooth">
-                <div className="mb-4">{item.icon}</div>
-                <h3 className="font-display font-bold text-navy-900 text-xl mb-2">{item.title}</h3>
-                <p className="text-navy-500 leading-relaxed">{item.desc}</p>
+              { stat: '$140B+', label: 'Lost in unclaimed crypto annually' },
+              { stat: '70%', label: 'Of people have no digital estate plan' },
+              { stat: '3.5B+', label: 'Digital accounts with no succession plan' },
+            ].map((item) => (
+              <Card key={item.label} className="glass-card text-center p-6">
+                <CardContent className="pt-0">
+                  <div className="text-4xl font-bold gradient-text mb-2">{item.stat}</div>
+                  <div className="text-muted-foreground">{item.label}</div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Features */}
+      <section className="py-20">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
+              Why Dead Man's Switch?
+            </h2>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              Built with cutting-edge technology to give you complete peace of mind.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {features.map((feature) => (
+              <Card key={feature.title} className="glass-card p-6 hover:border-primary/40 transition-colors">
+                <CardContent className="pt-0">
+                  <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-lg bg-secondary">
+                    {feature.icon}
+                  </div>
+                  <h3 className="text-lg font-semibold text-foreground mb-2">{feature.title}</h3>
+                  <p className="text-sm text-muted-foreground">{feature.description}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* How It Works */}
+      <section className="py-20 section-gradient">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
+              How It Works
+            </h2>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              Four simple steps to protect your digital legacy forever.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {steps.map((step) => (
+              <div key={step.step} className="relative">
+                <div className="glass-card p-6 h-full">
+                  <div className="text-4xl font-bold text-primary/20 mb-3">{step.step}</div>
+                  <h3 className="text-lg font-semibold text-foreground mb-2">{step.title}</h3>
+                  <p className="text-sm text-muted-foreground">{step.description}</p>
+                </div>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Our Solution */}
-      <section className="py-20 px-4 section-gradient">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-14">
-            <span className="text-primary text-sm font-semibold uppercase tracking-widest">Our Solution</span>
-            <h2 className="font-display text-4xl font-bold text-navy-900 mt-3 mb-4">
-              The Digital Legacy Locker
-            </h2>
-            <p className="text-navy-500 text-lg max-w-2xl mx-auto">
-              A secure, decentralized vault that holds your digital assets and releases them only when legally verified.
-            </p>
-          </div>
-          <div className="grid md:grid-cols-2 gap-8 items-center">
-            <div className="space-y-6">
-              {[
-                { step: '01', title: 'Store Encrypted Assets', desc: 'Add your digital credentials, encrypted with AES-256 and stored on the blockchain.' },
-                { step: '02', title: 'Designate Nominees', desc: 'Choose trusted individuals who will receive access after legal verification.' },
-                { step: '03', title: 'Legal Death Verification', desc: 'Our admin team verifies official death certificates before any access is granted.' },
-                { step: '04', title: 'Controlled Release', desc: 'Nominees receive secure, audited access to your digital legacy.' },
-              ].map((item) => (
-                <div key={item.step} className="flex gap-4">
-                  <div className="flex-shrink-0 w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                    <span className="text-primary font-bold text-sm">{item.step}</span>
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-navy-900 mb-1">{item.title}</h3>
-                    <p className="text-navy-500 text-sm leading-relaxed">{item.desc}</p>
-                  </div>
-                </div>
-              ))}
+      {/* Heir CTA Banner */}
+      <section className="py-16">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="rounded-2xl border border-accent/30 bg-accent/5 p-8 md:p-12 text-center">
+            <div className="inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/10 px-4 py-1.5 text-sm text-accent mb-6">
+              <Users className="h-4 w-4" />
+              <span>Are You a Nominated Heir?</span>
             </div>
-            <div className="bg-navy-900 rounded-2xl p-8 text-white shadow-glow">
-              <div className="flex items-center gap-3 mb-6">
-                <Shield size={28} className="text-navy-300" />
-                <span className="font-display font-bold text-xl">Security Architecture</span>
-              </div>
-              <div className="space-y-4">
-                {[
-                  { label: 'Encryption', value: 'AES-256 + Blockchain', icon: <Cpu size={16} /> },
-                  { label: 'Storage', value: 'Decentralized ICP', icon: <Globe size={16} /> },
-                  { label: 'Access Control', value: 'Role-Based (RBAC)', icon: <Lock size={16} /> },
-                  { label: 'Audit Trail', value: 'Immutable Logs', icon: <Activity size={16} /> },
-                  { label: 'Verification', value: 'Legal Document Review', icon: <FileCheck size={16} /> },
-                ].map((item) => (
-                  <div key={item.label} className="flex items-center justify-between py-2 border-b border-navy-700">
-                    <span className="flex items-center gap-2 text-navy-300 text-sm">{item.icon}{item.label}</span>
-                    <span className="text-white text-sm font-medium">{item.value}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Key Features */}
-      <section className="py-20 px-4 bg-white">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-14">
-            <span className="text-primary text-sm font-semibold uppercase tracking-widest">Key Features</span>
-            <h2 className="font-display text-4xl font-bold text-navy-900 mt-3 mb-4">
-              Enterprise-Grade Security
+            <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-4">
+              Submit a Death Verification Request
             </h2>
-          </div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {[
-              {
-                icon: <Cpu size={28} className="text-primary" />,
-                title: 'AES-256 Encryption',
-                desc: 'Military-grade encryption protects every credential stored in your vault.',
-                badge: 'AES-256',
-              },
-              {
-                icon: <Globe size={28} className="text-primary" />,
-                title: 'Secure Cloud Storage',
-                desc: 'Decentralized storage on the Internet Computer blockchain — no single point of failure.',
-                badge: 'Blockchain',
-              },
-              {
-                icon: <Shield size={28} className="text-primary" />,
-                title: 'Role-Based Access',
-                desc: 'Granular permissions ensure only verified nominees can access your assets.',
-                badge: 'RBAC',
-              },
-              {
-                icon: <Activity size={28} className="text-primary" />,
-                title: 'Activity Logging',
-                desc: 'Every action is timestamped and recorded in an immutable audit trail.',
-                badge: 'Audit Trail',
-              },
-            ].map((feature, i) => (
-              <div key={i} className="p-6 rounded-2xl border border-navy-100 hover:border-primary/30 hover:shadow-card-hover transition-smooth group">
-                <div className="mb-4 p-3 bg-primary/5 rounded-xl w-fit group-hover:bg-primary/10 transition-smooth">
-                  {feature.icon}
-                </div>
-                <h3 className="font-display font-bold text-navy-900 text-lg mb-2">{feature.title}</h3>
-                <p className="text-navy-500 text-sm leading-relaxed mb-3">{feature.desc}</p>
-                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-primary/10 text-primary">
-                  {feature.badge}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Innovation Highlight */}
-      <section className="py-20 px-4 bg-navy-900 text-white">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-14">
-            <span className="text-navy-300 text-sm font-semibold uppercase tracking-widest">Innovation</span>
-            <h2 className="font-display text-4xl font-bold text-white mt-3 mb-4">
-              Why We're Different
-            </h2>
-            <p className="text-navy-300 text-lg max-w-2xl mx-auto">
-              The first platform to combine legal verification with digital estate planning on a decentralized blockchain.
+            <p className="text-muted-foreground mb-8 max-w-xl mx-auto">
+              If you've been nominated as an heir and need to claim a digital legacy,
+              submit your verification request here.
             </p>
-          </div>
-          <div className="grid sm:grid-cols-2 gap-6">
-            {[
-              {
-                icon: <FileCheck size={24} className="text-navy-300" />,
-                title: 'Legal Verification + Digital Estate Planning',
-                desc: 'We bridge the gap between traditional legal processes and modern digital asset management. Death certificates are verified by our admin team before any access is granted.',
-              },
-              {
-                icon: <Lock size={24} className="text-navy-300" />,
-                title: 'Privacy-First Architecture',
-                desc: 'Your credentials are encrypted before storage. Even our platform cannot read your data. Zero-knowledge principles ensure complete privacy throughout.',
-              },
-              {
-                icon: <Shield size={24} className="text-navy-300" />,
-                title: 'Controlled Release After Verified Death',
-                desc: 'Assets are released only after multi-step verification: legal document review, admin approval, and multi-factor authentication by nominees.',
-              },
-              {
-                icon: <CheckCircle size={24} className="text-navy-300" />,
-                title: 'Fraud Prevention & Misuse Protection',
-                desc: 'Role-based access control, immutable audit trails, and multi-layer authentication prevent unauthorized access and fraudulent claims.',
-              },
-            ].map((item, i) => (
-              <div key={i} className="p-6 rounded-2xl bg-navy-800 border border-navy-700 hover:border-navy-500 transition-smooth">
-                <div className="flex items-start gap-4">
-                  <div className="p-2 bg-navy-700 rounded-lg flex-shrink-0">{item.icon}</div>
-                  <div>
-                    <h3 className="font-display font-bold text-white text-lg mb-2">{item.title}</h3>
-                    <p className="text-navy-300 text-sm leading-relaxed">{item.desc}</p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Social Impact */}
-      <section className="py-20 px-4 section-gradient">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-14">
-            <span className="text-primary text-sm font-semibold uppercase tracking-widest">Social Impact</span>
-            <h2 className="font-display text-4xl font-bold text-navy-900 mt-3 mb-4">
-              Protecting What Matters Most
-            </h2>
-          </div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {[
-              {
-                icon: <Heart size={28} className="text-red-500" />,
-                title: 'Family Financial Rights',
-                desc: 'Ensure your family receives their rightful inheritance without legal battles or lost accounts.',
-                stat: '73%',
-                statLabel: 'of families face digital asset loss',
-              },
-              {
-                icon: <Globe size={28} className="text-blue-500" />,
-                title: 'Digital Memories',
-                desc: 'Preserve photos, videos, and personal accounts so your digital legacy lives on.',
-                stat: '4.9B',
-                statLabel: 'social media accounts at risk',
-              },
-              {
-                icon: <Users size={28} className="text-purple-500" />,
-                title: 'Inheritance Conflicts',
-                desc: 'Clear, legally-verified access prevents disputes between family members and nominees.',
-                stat: '60%',
-                statLabel: 'reduction in inheritance disputes',
-              },
-              {
-                icon: <Shield size={28} className="text-emerald-500" />,
-                title: 'Valuable Digital Assets',
-                desc: 'Crypto wallets, investment accounts, and digital businesses are secured and transferred.',
-                stat: '$140B+',
-                statLabel: 'in digital assets lost annually',
-              },
-            ].map((item, i) => (
-              <div key={i} className="p-6 rounded-2xl bg-white border border-navy-100 hover:shadow-card-hover transition-smooth text-center">
-                <div className="flex justify-center mb-4">{item.icon}</div>
-                <div className="text-3xl font-display font-bold text-navy-900 mb-1">{item.stat}</div>
-                <p className="text-xs text-navy-400 mb-3">{item.statLabel}</p>
-                <h3 className="font-display font-bold text-navy-900 text-base mb-2">{item.title}</h3>
-                <p className="text-navy-500 text-sm leading-relaxed">{item.desc}</p>
-              </div>
-            ))}
+            <Button
+              size="lg"
+              variant="outline"
+              onClick={() => navigate({ to: '/death-verification-request' })}
+              className="gap-2 border-accent/50 text-accent hover:bg-accent/10"
+            >
+              Start Heir Verification
+              <ArrowRight className="h-4 w-4" />
+            </Button>
           </div>
         </div>
       </section>
 
       {/* Final CTA */}
-      <section className="py-20 px-4 bg-navy-900 text-white text-center">
-        <div className="max-w-2xl mx-auto">
-          <Shield size={48} className="text-navy-300 mx-auto mb-6" />
-          <h2 className="font-display text-4xl font-bold text-white mb-4">
-            Start Protecting Your Legacy Today
+      <section className="py-20">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 text-center">
+          <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
+            Protect Your Digital Legacy Today
           </h2>
-          <p className="text-navy-300 text-lg mb-8 leading-relaxed">
-            Join thousands of users who trust Digital Legacy Locker to secure their digital estate for their loved ones.
+          <p className="text-lg text-muted-foreground mb-8 max-w-xl mx-auto">
+            Join thousands who trust Dead Man's Switch to secure their digital assets
+            for the people they love most.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
             <Button
               size="lg"
-              onClick={() => router.navigate({ to: '/register' })}
-              className="bg-white text-navy-900 hover:bg-navy-50 font-semibold px-8 py-6 text-base shadow-glow transition-smooth"
+              onClick={() => navigate({ to: '/login' })}
+              className="gap-2 text-base px-8"
             >
-              <Shield size={18} className="mr-2" />
-              Create Your Legacy Plan
+              Get Started Free
+              <ArrowRight className="h-4 w-4" />
             </Button>
-            <Button
-              size="lg"
-              variant="outline"
-              onClick={() => router.navigate({ to: '/death-verification-request' })}
-              className="border-white/40 text-white hover:bg-white/10 font-semibold px-8 py-6 text-base backdrop-blur-sm transition-smooth"
-            >
-              <FileText size={18} className="mr-2" />
-              Submit Heir Verification
-            </Button>
+          </div>
+          <div className="flex flex-wrap justify-center gap-6 text-sm text-muted-foreground">
+            {['No credit card required', 'End-to-end encrypted', 'Blockchain secured', 'Cancel anytime'].map((item) => (
+              <div key={item} className="flex items-center gap-1.5">
+                <CheckCircle className="h-4 w-4 text-accent" />
+                <span>{item}</span>
+              </div>
+            ))}
           </div>
         </div>
       </section>
+
+      {/* Footer */}
+      <footer className="border-t border-border/50 py-10">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-2">
+              <Shield className="h-5 w-5 text-primary" />
+              <span className="font-semibold text-foreground">Dead Man's Switch</span>
+              <span className="text-muted-foreground text-sm">— Secure Today. Protected Forever.</span>
+            </div>
+            <div className="text-sm text-muted-foreground">
+              © {new Date().getFullYear()} Dead Man's Switch. All rights reserved.
+            </div>
+            <div className="text-sm text-muted-foreground flex items-center gap-1">
+              Built with <Heart className="h-3.5 w-3.5 text-destructive fill-destructive mx-0.5" /> using{' '}
+              <a
+                href={`https://caffeine.ai/?utm_source=Caffeine-footer&utm_medium=referral&utm_content=${encodeURIComponent(window.location.hostname || 'dead-mans-switch')}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:underline"
+              >
+                caffeine.ai
+              </a>
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

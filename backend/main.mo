@@ -145,6 +145,34 @@ actor {
     requestId : Nat;
   };
 
+  // ====== Document Submission Types and Storages ======
+  public type DocumentType = {
+    #idProof;
+    #deathCertificate;
+    #relationshipProof;
+  };
+
+  public type DocumentStatus = {
+    #pending;
+    #verified;
+    #rejected;
+  };
+
+  public type DocumentMetadata = {
+    id : Nat;
+    submitter : Principal;
+    timestamp : Time.Time;
+    docType : DocumentType;
+    status : DocumentStatus;
+    adminNote : ?Text;
+    adminVerifier : ?Principal;
+    verificationTime : ?Time.Time;
+    blob : Storage.ExternalBlob;
+  };
+
+  let documents = Map.empty<Nat, DocumentMetadata>();
+  var nextDocumentId = 0;
+
   let userProfiles = Map.empty<Principal, PersistentUserProfile>();
   let digitalAssets = Map.empty<Principal, List.List<PersistentDigitalAsset>>();
   let nominees = Map.empty<Principal, List.List<PersistentNominee>>();
@@ -515,6 +543,7 @@ actor {
 
   // ─── Death Verification Requests ─────────────────────────────────────────────
 
+  /// Submits a death verification request. Requires authenticated user role.
   public shared ({ caller }) func submitDeathVerificationRequest(
     deceasedFullName : Text,
     deceasedEmail : Text,
@@ -524,6 +553,9 @@ actor {
     deathCertificateBlob : Blob,
     relationshipProofBlob : ?Blob,
   ) : async Nat {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can submit death verification requests");
+    };
     let requestId = nextRequestId;
     nextRequestId += 1;
 
@@ -551,6 +583,7 @@ actor {
     requestId;
   };
 
+  /// Admin-only: Returns all death verification requests.
   public query ({ caller }) func getDeathVerificationRequests() : async [PersistentDeathVerificationRequest] {
     if (not (AccessControl.isAdmin(accessControlState, caller))) {
       Runtime.trap("Unauthorized: Only admins can view verification requests");
@@ -558,6 +591,7 @@ actor {
     deathVerificationRequests.values().toArray();
   };
 
+  /// Admin-only: Updates the status of a death verification request.
   public shared ({ caller }) func updateDeathVerificationStatus(
     requestId : Nat,
     newStatus : { #Approved; #Rejected },
@@ -586,5 +620,92 @@ actor {
       action = "Verification status updated for request " # requestId.toText();
       principal = caller;
     });
+  };
+
+  // ─── Document Submission/Verification ────────────────────────────────────────
+
+  /// Submits a new document for verification. Requires authenticated user role.
+  public shared ({ caller }) func submitDocument(
+    docType : DocumentType,
+    blob : Storage.ExternalBlob,
+  ) : async Nat {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can submit documents");
+    };
+
+    let id = nextDocumentId;
+    nextDocumentId += 1;
+
+    let newDoc : DocumentMetadata = {
+      id;
+      submitter = caller;
+      timestamp = Time.now();
+      docType;
+      status = #pending;
+      adminNote = null;
+      adminVerifier = null;
+      verificationTime = null;
+      blob;
+    };
+
+    documents.add(id, newDoc);
+
+    activityLogs.add({
+      timestamp = Time.now();
+      action = "Submitted new document (id: " # id.toText() # ")";
+      principal = caller;
+    });
+
+    id;
+  };
+
+  /// Admin-only: Approves or rejects a submitted document by record ID, with an optional admin note.
+  public shared ({ caller }) func verifyDocument(
+    documentId : Nat,
+    approve : Bool,
+    note : ?Text,
+  ) : async () {
+    if (not (AccessControl.isAdmin(accessControlState, caller))) {
+      Runtime.trap("Unauthorized: Only admins may verify documents");
+    };
+
+    let doc = switch (documents.get(documentId)) {
+      case (null) { Runtime.trap("Document not found") };
+      case (?d) { d };
+    };
+
+    let status : DocumentStatus = if (approve) { #verified } else { #rejected };
+
+    let updatedDoc = {
+      doc with
+      status;
+      adminNote = note;
+      adminVerifier = ?caller;
+      verificationTime = ?Time.now();
+    };
+
+    documents.add(documentId, updatedDoc);
+
+    activityLogs.add({
+      timestamp = Time.now();
+      action = "Document #" # documentId.toText() # ": Verified = " # approve.toText();
+      principal = caller;
+    });
+  };
+
+  /// Admin-only: Returns all documents with metadata.
+  public query ({ caller }) func getAllDocumentsWithMetadata() : async [DocumentMetadata] {
+    if (not (AccessControl.isAdmin(accessControlState, caller))) {
+      Runtime.trap("Unauthorized: Only admins may retrieve all documents");
+    };
+    documents.values().toArray();
+  };
+
+  /// Returns documents submitted by the caller (with metadata). Requires authenticated user role.
+  public query ({ caller }) func getUserSubmittedDocuments() : async [DocumentMetadata] {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can view their submitted documents");
+    };
+    documents.values().toArray().filter(func(meta : DocumentMetadata) : Bool { meta.submitter == caller });
   };
 };

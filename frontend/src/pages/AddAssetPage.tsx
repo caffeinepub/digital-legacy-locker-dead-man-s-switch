@@ -1,221 +1,259 @@
-import { useState } from 'react';
-import { useRouter } from '@tanstack/react-router';
-import { useInternetIdentity } from '../hooks/useInternetIdentity';
-import { useAddAsset } from '../hooks/useQueries';
-import { ExternalBlob, PersistentCategory } from '../backend';
-import { Shield, Lock, Eye, EyeOff, Cpu, Loader2, ArrowLeft, CheckCircle } from 'lucide-react';
+import React, { useState } from 'react';
+import { useNavigate } from '@tanstack/react-router';
+import {
+  Plus,
+  Trash2,
+  Lock,
+  Eye,
+  EyeOff,
+  Loader2,
+  ArrowLeft,
+  Database,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { toast } from 'sonner';
-import SecurityBadge from '../components/SecurityBadge';
+import { Badge } from '@/components/ui/badge';
+import { useGetAssets, useAddAsset, useRemoveAsset } from '../hooks/useQueries';
+import { ExternalBlob, PersistentCategory } from '../backend';
 
-const CATEGORY_OPTIONS = [
-  { value: PersistentCategory.banking, label: 'Banking & Finance' },
-  { value: PersistentCategory.socialMedia, label: 'Social Media' },
-  { value: PersistentCategory.crypto, label: 'Cryptocurrency' },
-  { value: PersistentCategory.cloud, label: 'Cloud Storage' },
-  { value: PersistentCategory.other, label: 'Other' },
-];
+const categoryLabels: Record<PersistentCategory, string> = {
+  [PersistentCategory.banking]: 'Banking',
+  [PersistentCategory.socialMedia]: 'Social Media',
+  [PersistentCategory.crypto]: 'Crypto',
+  [PersistentCategory.cloud]: 'Cloud',
+  [PersistentCategory.other]: 'Other',
+};
 
 export default function AddAssetPage() {
-  const router = useRouter();
-  const { identity } = useInternetIdentity();
+  const navigate = useNavigate();
+  const { data: assets, isLoading } = useGetAssets();
   const addAsset = useAddAsset();
+  const removeAsset = useRemoveAsset();
 
   const [platform, setPlatform] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [category, setCategory] = useState<PersistentCategory>(PersistentCategory.other);
+  const [category, setCategory] = useState<PersistentCategory | ''>('');
   const [showPassword, setShowPassword] = useState(false);
-  const [passwordFocused, setPasswordFocused] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const [formError, setFormError] = useState('');
 
-  if (!identity) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-navy-50">
-        <div className="text-center">
-          <Shield size={48} className="text-navy-300 mx-auto mb-4" />
-          <p className="text-navy-500 mb-4">Please log in to add assets.</p>
-          <Button onClick={() => router.navigate({ to: '/login' })}>Login</Button>
-        </div>
-      </div>
-    );
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!platform.trim()) { toast.error('Platform name is required'); return; }
-    if (!username.trim()) { toast.error('Username is required'); return; }
-    if (!password.trim()) { toast.error('Password is required'); return; }
-
-    const passwordBytes = new TextEncoder().encode(password);
-    const blob = ExternalBlob.fromBytes(passwordBytes);
+  const handleSubmit = async () => {
+    if (!platform.trim() || !username.trim() || !password.trim() || !category) {
+      setFormError('Please fill in all fields.');
+      return;
+    }
+    setFormError('');
 
     try {
+      const encoder = new TextEncoder();
+      const passwordBytes = encoder.encode(password);
+      const blob = ExternalBlob.fromBytes(passwordBytes);
+      const encryptedPassword = { blob, size: BigInt(passwordBytes.length) };
+
       await addAsset.mutateAsync({
         platform: platform.trim(),
         username: username.trim(),
-        encryptedPassword: { blob, size: BigInt(passwordBytes.length) },
-        category,
+        encryptedPassword,
+        category: category as PersistentCategory,
       });
-      setSaved(true);
-      toast.success('Asset saved securely!');
-      setTimeout(() => router.navigate({ to: '/dashboard' }), 1500);
-    } catch {
-      toast.error('Failed to save asset. Please try again.');
+
+      setPlatform('');
+      setUsername('');
+      setPassword('');
+      setCategory('');
+    } catch (err) {
+      console.error('Add asset error:', err);
+      setFormError('Failed to add asset. Please try again.');
     }
   };
 
-  if (saved) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-navy-50 px-4">
-        <div className="text-center max-w-sm">
-          <div className="w-20 h-20 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-6">
-            <CheckCircle size={40} className="text-emerald-500" />
-          </div>
-          <h2 className="font-display text-2xl font-bold text-navy-900 mb-2">Asset Saved!</h2>
-          <p className="text-navy-500 mb-2">Your credentials have been encrypted and stored securely.</p>
-          <SecurityBadge type="e2e" className="mx-auto" />
-        </div>
-      </div>
-    );
-  }
+  const handleRemove = async (idx: number) => {
+    try {
+      await removeAsset.mutateAsync(BigInt(idx));
+    } catch (err) {
+      console.error('Remove asset error:', err);
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-navy-50 py-8 px-4">
-      <div className="max-w-lg mx-auto">
+    <div className="min-h-screen bg-background">
+      <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
-        <div className="flex items-center gap-3 mb-8">
-          <Button variant="ghost" size="icon" onClick={() => router.navigate({ to: '/dashboard' })} className="text-navy-500">
-            <ArrowLeft size={20} />
+        <div className="flex items-center gap-4 mb-8">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate({ to: '/dashboard' })}
+          >
+            <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>
-            <h1 className="font-display text-2xl font-bold text-navy-900">Add Digital Asset</h1>
-            <p className="text-navy-500 text-sm">Store your credentials securely</p>
+            <h1 className="text-2xl font-bold text-foreground">Digital Assets</h1>
+            <p className="text-sm text-muted-foreground">
+              Manage your encrypted digital accounts on Dead Man's Switch
+            </p>
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-card p-8">
-          {/* Security Header */}
-          <div className="flex items-center justify-between mb-6 p-4 rounded-xl bg-navy-900">
-            <div className="flex items-center gap-2">
-              <Shield size={18} className="text-navy-300" />
-              <span className="text-white font-semibold text-sm">Secure Vault Entry</span>
-            </div>
-            <SecurityBadge type="aes256" />
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Platform Name */}
-            <div>
-              <Label htmlFor="platform" className="text-navy-700 font-medium">Platform Name</Label>
-              <Input
-                id="platform"
-                value={platform}
-                onChange={(e) => setPlatform(e.target.value)}
-                placeholder="e.g., Gmail, Chase Bank, Coinbase"
-                className="mt-1.5"
-              />
-            </div>
-
-            {/* Username */}
-            <div>
-              <Label htmlFor="username" className="text-navy-700 font-medium">Username / Email</Label>
-              <Input
-                id="username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="Enter your username or email"
-                className="mt-1.5"
-              />
-            </div>
-
-            {/* Password with AES indicator */}
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <Label htmlFor="password" className="text-navy-700 font-medium">Password</Label>
-                {(passwordFocused || password) && (
-                  <div className="flex items-center gap-1 text-xs text-amber-600 animate-fade-in">
-                    <Cpu size={11} />
-                    <span className="font-semibold">AES-256 Encrypting...</span>
-                  </div>
-                )}
-              </div>
-              <div className="relative">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Add Asset Form */}
+          <Card className="glass-card">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Plus className="h-5 w-5 text-primary" />
+                Add New Asset
+              </CardTitle>
+              <CardDescription>
+                Your credentials are encrypted before being stored on the blockchain.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="platform">Platform / Service *</Label>
                 <Input
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  onFocus={() => setPasswordFocused(true)}
-                  onBlur={() => setPasswordFocused(false)}
-                  placeholder="Enter password to encrypt"
-                  className={`mt-0 pr-10 transition-smooth ${(passwordFocused || password) ? 'border-amber-400 ring-1 ring-amber-200' : ''}`}
+                  id="platform"
+                  placeholder="e.g., Gmail, Coinbase, Chase Bank"
+                  value={platform}
+                  onChange={(e) => setPlatform(e.target.value)}
+                  className="bg-[#1a2230] text-white placeholder:text-gray-400 caret-white"
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-navy-400 hover:text-navy-600"
-                >
-                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                </button>
               </div>
-              {(passwordFocused || password) && (
-                <div className="mt-2 flex items-center gap-2 animate-fade-in">
-                  <div className="flex-1 h-1.5 rounded-full bg-navy-100 overflow-hidden">
-                    <div
-                      className="h-full bg-gradient-to-r from-amber-400 to-emerald-500 transition-all duration-500"
-                      style={{ width: password.length > 0 ? `${Math.min(100, (password.length / 16) * 100)}%` : '0%' }}
-                    />
-                  </div>
-                  <span className="text-xs text-navy-400">Encryption strength</span>
+              <div className="space-y-2">
+                <Label htmlFor="username">Username / Email *</Label>
+                <Input
+                  id="username"
+                  placeholder="Your login username or email"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  className="bg-[#1a2230] text-white placeholder:text-gray-400 caret-white"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="password">Password / Key *</Label>
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="Your password or secret key"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="bg-[#1a2230] text-white placeholder:text-gray-400 caret-white pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
                 </div>
-              )}
-            </div>
-
-            {/* Category */}
-            <div>
-              <Label className="text-navy-700 font-medium">Category</Label>
-              <Select value={category} onValueChange={(v) => setCategory(v as PersistentCategory)}>
-                <SelectTrigger className="mt-1.5">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {CATEGORY_OPTIONS.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* E2E Badge + Submit */}
-            <div className="pt-2 space-y-3">
-              <div className="flex items-center justify-center gap-2 p-3 rounded-xl bg-emerald-50 border border-emerald-200">
-                <Lock size={14} className="text-emerald-600" />
-                <span className="text-sm font-semibold text-emerald-700">End-to-End Encrypted</span>
-                <SecurityBadge type="aes256" />
               </div>
+              <div className="space-y-2">
+                <Label>Category *</Label>
+                <Select
+                  value={category}
+                  onValueChange={(val) => setCategory(val as PersistentCategory)}
+                >
+                  <SelectTrigger className="bg-[#1a2230] text-white">
+                    <SelectValue placeholder="Select a category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(categoryLabels).map(([val, label]) => (
+                      <SelectItem key={val} value={val}>
+                        {label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {formError && (
+                <p className="text-sm text-destructive">{formError}</p>
+              )}
               <Button
-                type="submit"
-                className="w-full py-6 text-base font-semibold gap-2"
+                onClick={handleSubmit}
                 disabled={addAsset.isPending}
+                className="w-full gap-2"
               >
                 {addAsset.isPending ? (
-                  <><Loader2 size={18} className="animate-spin" /> Encrypting & Saving...</>
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Encrypting & Saving...
+                  </>
                 ) : (
-                  <><Shield size={18} /> Save Securely</>
+                  <>
+                    <Lock className="h-4 w-4" />
+                    Encrypt & Save Asset
+                  </>
                 )}
               </Button>
-            </div>
-          </form>
-        </div>
+            </CardContent>
+          </Card>
 
-        {/* Info */}
-        <div className="mt-4 p-4 rounded-xl bg-navy-900 text-navy-300 text-xs flex items-start gap-2">
-          <Cpu size={14} className="flex-shrink-0 mt-0.5 text-navy-400" />
-          <span>Your password is encrypted with AES-256 before being stored on the blockchain. It cannot be read by anyone, including our team.</span>
+          {/* Assets List */}
+          <Card className="glass-card">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Database className="h-5 w-5 text-primary" />
+                Stored Assets
+              </CardTitle>
+              <CardDescription>
+                {assets?.length ?? 0} encrypted asset{(assets?.length ?? 0) !== 1 ? 's' : ''} stored
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <div className="space-y-3">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="h-16 rounded-lg bg-secondary/50 animate-pulse" />
+                  ))}
+                </div>
+              ) : assets && assets.length > 0 ? (
+                <div className="space-y-2 max-h-96 overflow-y-auto pr-1">
+                  {assets.map((asset, idx) => (
+                    <div
+                      key={idx}
+                      className="flex items-center justify-between p-3 rounded-lg bg-secondary/50 hover:bg-secondary transition-colors"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary/10">
+                          <Lock className="h-4 w-4 text-primary" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-foreground truncate">{asset.platform}</p>
+                          <p className="text-xs text-muted-foreground truncate">{asset.username}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0 ml-2">
+                        <Badge variant="outline" className="text-xs hidden sm:flex">
+                          {categoryLabels[asset.category]}
+                        </Badge>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                          onClick={() => handleRemove(idx)}
+                          disabled={removeAsset.isPending}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-10">
+                  <Lock className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
+                  <p className="text-sm text-muted-foreground">No assets added yet</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Add your first encrypted asset using the form
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>

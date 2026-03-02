@@ -1,208 +1,311 @@
-import { useState, useEffect, useCallback } from 'react';
-import { useRouter } from '@tanstack/react-router';
+import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from '@tanstack/react-router';
+import { Shield, Copy, Check, KeyRound, ArrowRight, Loader2, ShieldCheck, Users } from 'lucide-react';
 import { useInternetIdentity } from '../hooks/useInternetIdentity';
-import { useGetCallerUserProfile } from '../hooks/useQueries';
-import { Shield, Lock, ArrowRight, Loader2, Copy, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
-import { toast } from 'sonner';
+import { useGetCallerUserProfile, useIsAdmin } from '../hooks/useQueries';
+import { Badge } from '@/components/ui/badge';
 
-type Step = 'identity' | 'otp';
-
-function generateOtp(): string {
-  return Math.floor(100000 + Math.random() * 900000).toString();
-}
+type LoginMode = 'user' | 'admin';
 
 export default function LoginPage() {
-  const router = useRouter();
-  const { login, clear, loginStatus, identity, isInitializing } = useInternetIdentity();
-  const [step, setStep] = useState<Step>('identity');
-  const [otp, setOtp] = useState('');
-  const [otpVerified, setOtpVerified] = useState(false);
+  const navigate = useNavigate();
+  const { login, clear, loginStatus, identity } = useInternetIdentity();
+  const [step, setStep] = useState<'select' | 'otp'>('select');
+  const [loginMode, setLoginMode] = useState<LoginMode>('user');
   const [generatedOtp, setGeneratedOtp] = useState('');
+  const [enteredOtp, setEnteredOtp] = useState('');
   const [copied, setCopied] = useState(false);
+  const [otpError, setOtpError] = useState('');
+  const [otpVerified, setOtpVerified] = useState(false);
+  const hasMovedToOtp = useRef(false);
+  const hasRedirected = useRef(false);
 
   const isAuthenticated = !!identity;
-  const { data: userProfile, isLoading: profileLoading, isFetched } = useGetCallerUserProfile();
+  const isLoggingIn = loginStatus === 'logging-in';
 
-  // After login, move to OTP step and generate OTP
+  const { data: userProfile, isLoading: profileLoading, isFetched: profileFetched } = useGetCallerUserProfile();
+  const { data: isAdmin, isLoading: adminLoading, isFetched: adminFetched } = useIsAdmin();
+
+  // When authenticated, generate OTP and move to OTP step (only once)
   useEffect(() => {
-    if (isAuthenticated && step === 'identity') {
-      const newOtp = generateOtp();
-      setGeneratedOtp(newOtp);
+    if (isAuthenticated && !hasMovedToOtp.current) {
+      hasMovedToOtp.current = true;
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      setGeneratedOtp(otp);
       setStep('otp');
     }
-  }, [isAuthenticated, step]);
+  }, [isAuthenticated]);
 
-  // After OTP verified, redirect based on profile
+  // After OTP is verified, wait for profile and admin data, then redirect
   useEffect(() => {
-    if (otpVerified && isFetched && !profileLoading) {
-      if (userProfile) {
-        router.navigate({ to: '/dashboard' });
-      } else {
-        router.navigate({ to: '/register' });
-      }
-    }
-  }, [otpVerified, isFetched, profileLoading, userProfile, router]);
+    if (!otpVerified) return;
+    if (hasRedirected.current) return;
 
-  const handleCopyOtp = useCallback(async () => {
-    if (!generatedOtp) return;
+    // Wait for both admin check and profile to finish loading
+    const adminReady = adminFetched && !adminLoading;
+    const profileReady = profileFetched && !profileLoading;
+
+    if (!adminReady || !profileReady) return;
+
+    hasRedirected.current = true;
+
+    if (isAdmin) {
+      navigate({ to: '/admin/dashboard' });
+    } else if (userProfile) {
+      navigate({ to: '/dashboard' });
+    } else {
+      navigate({ to: '/register' });
+    }
+  }, [otpVerified, isAdmin, adminLoading, adminFetched, userProfile, profileLoading, profileFetched, navigate]);
+
+  const handleLogin = async (mode: LoginMode) => {
+    setLoginMode(mode);
+    hasMovedToOtp.current = false;
+    hasRedirected.current = false;
     try {
-      await navigator.clipboard.writeText(generatedOtp);
-      setCopied(true);
-      toast.success('OTP copied to clipboard!');
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      toast.error('Failed to copy. Please copy manually.');
-    }
-  }, [generatedOtp]);
-
-  const handleOtpChange = (value: string) => {
-    setOtp(value);
-    if (value.length === 6) {
-      if (value === generatedOtp) {
-        setTimeout(() => {
-          toast.success('OTP verified successfully');
-          setOtpVerified(true);
-        }, 400);
-      } else {
-        toast.error('Incorrect OTP. Please try again.');
-        setOtp('');
+      await login();
+    } catch (error: any) {
+      console.error('Login error:', error);
+      if (error.message === 'User is already authenticated') {
+        await clear();
+        setTimeout(() => login(), 300);
       }
     }
   };
 
-  if (isInitializing) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-navy-950 via-navy-900 to-navy-800">
-        <Loader2 size={32} className="animate-spin text-white" />
-      </div>
-    );
-  }
+  const handleCopyOtp = () => {
+    navigator.clipboard.writeText(generatedOtp);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleVerifyOtp = () => {
+    if (enteredOtp === generatedOtp) {
+      setOtpVerified(true);
+      // Redirect will be handled by the useEffect above once data is ready
+    } else {
+      setOtpError('Invalid OTP. Please try again.');
+      setEnteredOtp('');
+    }
+  };
+
+  const isRedirecting = otpVerified && (adminLoading || profileLoading || !adminFetched || !profileFetched);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-navy-950 via-navy-900 to-navy-800 flex items-center justify-center px-4 py-12">
-      <div className="w-full max-w-md">
-        {/* Header */}
+    <div className="min-h-screen bg-background flex items-center justify-center px-4 py-12">
+      <div className="w-full max-w-lg">
+        {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-white/10 border border-white/20 mb-4">
-            <img src="/assets/generated/logo-icon.dim_128x128.png" alt="Logo" className="w-10 h-10 rounded-lg" />
+          <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 border border-primary/30 mb-4">
+            <Shield className="h-8 w-8 text-primary" />
           </div>
-          <h1 className="font-display text-3xl font-bold text-white">Welcome Back</h1>
-          <p className="text-navy-300 mt-2">Sign in to access your digital legacy</p>
+          <h1 className="text-2xl font-bold text-foreground">Dead Man's Switch</h1>
+          <p className="text-muted-foreground text-sm mt-1">Secure Today. Protected Forever.</p>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-glow p-8 animate-fade-in">
-          {/* Step 1: Identity */}
-          {step === 'identity' && (
-            <div className="space-y-6">
-              <div>
-                <h2 className="font-display text-xl font-bold text-navy-900 mb-1">Connect Your Identity</h2>
-                <p className="text-navy-500 text-sm">Use your Internet Identity to securely sign in.</p>
-              </div>
-
-              <div className="p-4 rounded-xl bg-navy-50 border border-navy-100 space-y-3">
+        {step === 'select' ? (
+          <div className="space-y-4">
+            {/* User Login Card */}
+            <Card className="glass-card border-border/60 hover:border-primary/40 transition-colors">
+              <CardHeader className="pb-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                    <Lock size={18} className="text-primary" />
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 border border-primary/20">
+                    <Users className="h-5 w-5 text-primary" />
                   </div>
                   <div>
-                    <p className="font-semibold text-navy-900 text-sm">Internet Identity</p>
-                    <p className="text-xs text-navy-500">Secure, passwordless authentication</p>
+                    <CardTitle className="text-base">User Login</CardTitle>
+                    <CardDescription className="text-xs">
+                      Access your personal secure vault
+                    </CardDescription>
                   </div>
+                  <Badge variant="secondary" className="ml-auto text-xs">Standard</Badge>
                 </div>
-              </div>
-
-              <Button
-                className="w-full py-5 font-semibold gap-2"
-                onClick={() => login()}
-                disabled={loginStatus === 'logging-in'}
-              >
-                {loginStatus === 'logging-in' ? (
-                  <Loader2 size={16} className="animate-spin" />
-                ) : (
-                  <ArrowRight size={16} />
-                )}
-                {loginStatus === 'logging-in' ? 'Connecting...' : 'Sign In'}
-              </Button>
-
-              <p className="text-center text-sm text-navy-500">
-                Don't have an account?{' '}
-                <button
-                  onClick={() => router.navigate({ to: '/register' })}
-                  className="text-primary font-medium hover:underline"
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Sign in to manage your digital assets, nominees, and legacy settings.
+                </p>
+                <Button
+                  onClick={() => handleLogin('user')}
+                  disabled={isLoggingIn}
+                  className="w-full gap-2"
+                  size="lg"
                 >
-                  Register here
-                </button>
-              </p>
-            </div>
-          )}
+                  {isLoggingIn && loginMode === 'user' ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Connecting...
+                    </>
+                  ) : (
+                    <>
+                      <KeyRound className="h-4 w-4" />
+                      Login as User
+                    </>
+                  )}
+                </Button>
+              </CardContent>
+            </Card>
 
-          {/* Step 2: OTP */}
-          {step === 'otp' && (
-            <div className="space-y-5">
-              <div>
-                <h2 className="font-display text-xl font-bold text-navy-900 mb-1">Two-Factor Verification</h2>
-                <p className="text-navy-500 text-sm">Copy the OTP below and enter it to complete sign-in.</p>
-              </div>
-
-              {/* Generated OTP Display */}
-              <div className="p-4 rounded-xl bg-navy-50 border border-navy-200">
-                <p className="text-xs text-navy-500 mb-2 font-medium uppercase tracking-wide">Your One-Time Password</p>
+            {/* Admin Login Card */}
+            <Card className="glass-card border-amber-500/30 hover:border-amber-500/60 transition-colors bg-amber-500/5">
+              <CardHeader className="pb-3">
                 <div className="flex items-center gap-3">
-                  <span className="font-mono text-3xl font-bold text-navy-900 tracking-[0.25em] flex-1">
-                    {generatedOtp}
-                  </span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleCopyOtp}
-                    className="gap-1.5 shrink-0"
-                  >
-                    {copied ? <Check size={14} className="text-emerald-600" /> : <Copy size={14} />}
-                    {copied ? 'Copied!' : 'Copy'}
-                  </Button>
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-500/10 border border-amber-500/30">
+                    <ShieldCheck className="h-5 w-5 text-amber-500" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-base">Admin Login</CardTitle>
+                    <CardDescription className="text-xs">
+                      Access the admin control panel
+                    </CardDescription>
+                  </div>
+                  <Badge className="ml-auto text-xs bg-amber-500/20 text-amber-600 border-amber-500/30 hover:bg-amber-500/30">
+                    Admin
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Sign in with your admin Internet Identity to review documents, manage verifications, and oversee the platform.
+                </p>
+                <Button
+                  onClick={() => handleLogin('admin')}
+                  disabled={isLoggingIn}
+                  className="w-full gap-2 bg-amber-500 hover:bg-amber-600 text-white border-0"
+                  size="lg"
+                >
+                  {isLoggingIn && loginMode === 'admin' ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Connecting...
+                    </>
+                  ) : (
+                    <>
+                      <ShieldCheck className="h-4 w-4" />
+                      Login as Admin
+                    </>
+                  )}
+                </Button>
+                <p className="text-xs text-muted-foreground mt-2 text-center">
+                  Admin access is determined by your Internet Identity principal
+                </p>
+              </CardContent>
+            </Card>
+
+            <p className="text-center text-xs text-muted-foreground mt-4">
+              Both login options use Internet Computer's secure Internet Identity.
+              <br />No passwords stored. Fully decentralized.
+            </p>
+          </div>
+        ) : (
+          /* OTP Verification Step */
+          <Card className="glass-card">
+            <CardHeader>
+              <div className="flex items-center gap-3 mb-1">
+                <div className={`flex h-10 w-10 items-center justify-center rounded-lg border ${
+                  loginMode === 'admin'
+                    ? 'bg-amber-500/10 border-amber-500/30'
+                    : 'bg-primary/10 border-primary/20'
+                }`}>
+                  {loginMode === 'admin'
+                    ? <ShieldCheck className="h-5 w-5 text-amber-500" />
+                    : <KeyRound className="h-5 w-5 text-primary" />
+                  }
+                </div>
+                <div>
+                  <CardTitle className="text-xl">Verify Identity</CardTitle>
+                  <CardDescription className="text-xs">
+                    {loginMode === 'admin' ? 'Admin verification' : 'User verification'}
+                  </CardDescription>
                 </div>
               </div>
-
-              <div>
-                <p className="text-sm text-navy-600 mb-3 text-center">Enter the OTP above to continue</p>
-                <div className="flex justify-center py-2">
-                  <InputOTP maxLength={6} value={otp} onChange={handleOtpChange}>
-                    <InputOTPGroup>
-                      <InputOTPSlot index={0} />
-                      <InputOTPSlot index={1} />
-                      <InputOTPSlot index={2} />
-                      <InputOTPSlot index={3} />
-                      <InputOTPSlot index={4} />
-                      <InputOTPSlot index={5} />
-                    </InputOTPGroup>
-                  </InputOTP>
+              <CardDescription>
+                Enter the OTP displayed below to complete your {loginMode === 'admin' ? 'admin ' : ''}login.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                {/* Generated OTP Display */}
+                <div className={`rounded-lg border p-4 text-center ${
+                  loginMode === 'admin'
+                    ? 'border-amber-500/30 bg-amber-500/5'
+                    : 'border-primary/30 bg-primary/5'
+                }`}>
+                  <p className="text-xs text-muted-foreground mb-2">Your One-Time Password</p>
+                  <div className="flex items-center justify-center gap-3">
+                    <span className={`text-3xl font-mono font-bold tracking-widest ${
+                      loginMode === 'admin' ? 'text-amber-500' : 'text-primary'
+                    }`}>
+                      {generatedOtp}
+                    </span>
+                    <button
+                      onClick={handleCopyOtp}
+                      className="p-1.5 rounded-md hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors"
+                    >
+                      {copied ? <Check className="h-4 w-4 text-accent" /> : <Copy className="h-4 w-4" />}
+                    </button>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Copy this OTP and enter it below to verify
+                  </p>
                 </div>
+
+                {/* OTP Input */}
+                <div className="space-y-3">
+                  <p className="text-sm text-center text-muted-foreground">Enter the OTP above</p>
+                  <div className="flex justify-center">
+                    <InputOTP
+                      maxLength={6}
+                      value={enteredOtp}
+                      onChange={(val) => {
+                        setEnteredOtp(val);
+                        setOtpError('');
+                      }}
+                    >
+                      <InputOTPGroup>
+                        <InputOTPSlot index={0} />
+                        <InputOTPSlot index={1} />
+                        <InputOTPSlot index={2} />
+                        <InputOTPSlot index={3} />
+                        <InputOTPSlot index={4} />
+                        <InputOTPSlot index={5} />
+                      </InputOTPGroup>
+                    </InputOTP>
+                  </div>
+                  {otpError && (
+                    <p className="text-sm text-destructive text-center">{otpError}</p>
+                  )}
+                </div>
+
+                <Button
+                  onClick={handleVerifyOtp}
+                  disabled={enteredOtp.length !== 6 || isRedirecting}
+                  className={`w-full gap-2 ${
+                    loginMode === 'admin'
+                      ? 'bg-amber-500 hover:bg-amber-600 text-white border-0'
+                      : ''
+                  }`}
+                  size="lg"
+                >
+                  {isRedirecting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Checking access...
+                    </>
+                  ) : (
+                    <>
+                      Verify & Continue
+                      <ArrowRight className="h-4 w-4" />
+                    </>
+                  )}
+                </Button>
               </div>
-
-              {(profileLoading && otpVerified) && (
-                <div className="flex items-center justify-center gap-2 text-sm text-navy-500">
-                  <Loader2 size={14} className="animate-spin" />
-                  Loading your profile...
-                </div>
-              )}
-
-              <button
-                onClick={async () => {
-                  await clear();
-                  setStep('identity');
-                  setOtp('');
-                  setGeneratedOtp('');
-                  setOtpVerified(false);
-                }}
-                className="w-full text-center text-sm text-navy-400 hover:text-navy-600 transition-colors"
-              >
-                ← Use a different identity
-              </button>
-            </div>
-          )}
-        </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );

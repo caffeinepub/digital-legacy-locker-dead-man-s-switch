@@ -64,6 +64,27 @@ export const PersistentActivityLog = IDL.Record({
   'action' : IDL.Text,
   'timestamp' : Time,
 });
+export const DocumentStatus = IDL.Variant({
+  'verified' : IDL.Null,
+  'pending' : IDL.Null,
+  'rejected' : IDL.Null,
+});
+export const DocumentType = IDL.Variant({
+  'idProof' : IDL.Null,
+  'deathCertificate' : IDL.Null,
+  'relationshipProof' : IDL.Null,
+});
+export const DocumentMetadata = IDL.Record({
+  'id' : IDL.Nat,
+  'status' : DocumentStatus,
+  'verificationTime' : IDL.Opt(Time),
+  'submitter' : IDL.Principal,
+  'blob' : ExternalBlob,
+  'adminVerifier' : IDL.Opt(IDL.Principal),
+  'adminNote' : IDL.Opt(IDL.Text),
+  'timestamp' : Time,
+  'docType' : DocumentType,
+});
 export const PersistentDigitalAsset = IDL.Record({
   'encryptedPassword' : PersistentEncryptedData,
   'username' : IDL.Text,
@@ -158,6 +179,11 @@ export const idlService = IDL.Service({
       ['query'],
     ),
   'getActivityLogs' : IDL.Func([], [IDL.Vec(PersistentActivityLog)], ['query']),
+  'getAllDocumentsWithMetadata' : IDL.Func(
+      [],
+      [IDL.Vec(DocumentMetadata)],
+      ['query'],
+    ),
   'getAssets' : IDL.Func([], [IDL.Vec(PersistentDigitalAsset)], ['query']),
   'getCallerActivityLogs' : IDL.Func(
       [],
@@ -191,6 +217,11 @@ export const idlService = IDL.Service({
       [IDL.Opt(PersistentUserProfile)],
       ['query'],
     ),
+  'getUserSubmittedDocuments' : IDL.Func(
+      [],
+      [IDL.Vec(DocumentMetadata)],
+      ['query'],
+    ),
   'initiateLegalVerification' : IDL.Func([], [], []),
   'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
   'isCallerApproved' : IDL.Func([], [IDL.Bool], ['query']),
@@ -220,12 +251,14 @@ export const idlService = IDL.Service({
       [IDL.Nat],
       [],
     ),
+  'submitDocument' : IDL.Func([DocumentType, ExternalBlob], [IDL.Nat], []),
   'updateAccountState' : IDL.Func([IDL.Principal, IDL.Bool], [], []),
   'updateDeathVerificationStatus' : IDL.Func(
       [IDL.Nat, IDL.Variant({ 'Approved' : IDL.Null, 'Rejected' : IDL.Null })],
       [],
       [],
     ),
+  'verifyDocument' : IDL.Func([IDL.Nat, IDL.Bool, IDL.Opt(IDL.Text)], [], []),
 });
 
 export const idlInitArgs = [];
@@ -286,6 +319,27 @@ export const idlFactory = ({ IDL }) => {
     'principal' : IDL.Principal,
     'action' : IDL.Text,
     'timestamp' : Time,
+  });
+  const DocumentStatus = IDL.Variant({
+    'verified' : IDL.Null,
+    'pending' : IDL.Null,
+    'rejected' : IDL.Null,
+  });
+  const DocumentType = IDL.Variant({
+    'idProof' : IDL.Null,
+    'deathCertificate' : IDL.Null,
+    'relationshipProof' : IDL.Null,
+  });
+  const DocumentMetadata = IDL.Record({
+    'id' : IDL.Nat,
+    'status' : DocumentStatus,
+    'verificationTime' : IDL.Opt(Time),
+    'submitter' : IDL.Principal,
+    'blob' : ExternalBlob,
+    'adminVerifier' : IDL.Opt(IDL.Principal),
+    'adminNote' : IDL.Opt(IDL.Text),
+    'timestamp' : Time,
+    'docType' : DocumentType,
   });
   const PersistentDigitalAsset = IDL.Record({
     'encryptedPassword' : PersistentEncryptedData,
@@ -385,6 +439,11 @@ export const idlFactory = ({ IDL }) => {
         [IDL.Vec(PersistentActivityLog)],
         ['query'],
       ),
+    'getAllDocumentsWithMetadata' : IDL.Func(
+        [],
+        [IDL.Vec(DocumentMetadata)],
+        ['query'],
+      ),
     'getAssets' : IDL.Func([], [IDL.Vec(PersistentDigitalAsset)], ['query']),
     'getCallerActivityLogs' : IDL.Func(
         [],
@@ -418,6 +477,11 @@ export const idlFactory = ({ IDL }) => {
         [IDL.Opt(PersistentUserProfile)],
         ['query'],
       ),
+    'getUserSubmittedDocuments' : IDL.Func(
+        [],
+        [IDL.Vec(DocumentMetadata)],
+        ['query'],
+      ),
     'initiateLegalVerification' : IDL.Func([], [], []),
     'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
     'isCallerApproved' : IDL.Func([], [IDL.Bool], ['query']),
@@ -447,6 +511,7 @@ export const idlFactory = ({ IDL }) => {
         [IDL.Nat],
         [],
       ),
+    'submitDocument' : IDL.Func([DocumentType, ExternalBlob], [IDL.Nat], []),
     'updateAccountState' : IDL.Func([IDL.Principal, IDL.Bool], [], []),
     'updateDeathVerificationStatus' : IDL.Func(
         [
@@ -456,6 +521,7 @@ export const idlFactory = ({ IDL }) => {
         [],
         [],
       ),
+    'verifyDocument' : IDL.Func([IDL.Nat, IDL.Bool, IDL.Opt(IDL.Text)], [], []),
   });
 };
 

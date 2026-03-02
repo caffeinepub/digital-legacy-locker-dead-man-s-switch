@@ -1,41 +1,41 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
+    --background: 0.13 0.02 240;
+    --foreground: 0.95 0.01 240;
+
+    --card: 0.17 0.025 240;
+    --card-foreground: 0.95 0.01 240;
+
+    --popover: 0.17 0.025 240;
+    --popover-foreground: 0.95 0.01 240;
+
+    --primary: 0.65 0.18 200;
+    --primary-foreground: 0.10 0.02 240;
+
+    --secondary: 0.22 0.03 240;
+    --secondary-foreground: 0.90 0.01 240;
+
+    --muted: 0.22 0.03 240;
+    --muted-foreground: 0.65 0.02 240;
+
+    --accent: 0.55 0.20 160;
+    --accent-foreground: 0.10 0.02 240;
+
+    --destructive: 0.55 0.22 25;
+    --destructive-foreground: 0.98 0.01 240;
+
+    --border: 0.28 0.03 240;
+    --input: 0.20 0.03 240;
+    --ring: 0.65 0.18 200;
+
+    --gold: 0.78 0.15 85;
+    --gold-foreground: 0.10 0.02 240;
+
     --radius: 0.5rem;
-
-    /* Dark blue fintech palette */
-    --background: 0.97 0.008 240;
-    --foreground: 0.15 0.04 250;
-
-    --card: 1 0 0;
-    --card-foreground: 0.15 0.04 250;
-
-    --popover: 1 0 0;
-    --popover-foreground: 0.15 0.04 250;
-
-    --primary: 0.32 0.12 255;
-    --primary-foreground: 0.98 0 0;
-
-    --secondary: 0.93 0.02 240;
-    --secondary-foreground: 0.25 0.08 255;
-
-    --muted: 0.93 0.015 240;
-    --muted-foreground: 0.5 0.04 250;
-
-    --accent: 0.9 0.03 240;
-    --accent-foreground: 0.25 0.08 255;
-
-    --destructive: 0.577 0.245 27.325;
-    --destructive-foreground: 0.985 0 0;
-
-    --border: 0.88 0.02 240;
-    --input: 0.88 0.02 240;
-    --ring: 0.32 0.12 255;
 
     --success: 0.55 0.15 145;
     --success-foreground: 0.98 0 0;
@@ -48,134 +48,163 @@
     --chart-4: 0.828 0.189 84.429;
     --chart-5: 0.769 0.188 70.08;
 
-    --sidebar: 0.985 0 0;
-    --sidebar-foreground: 0.145 0 0;
-    --sidebar-primary: 0.205 0 0;
-    --sidebar-primary-foreground: 0.985 0 0;
-    --sidebar-accent: 0.97 0 0;
-    --sidebar-accent-foreground: 0.205 0 0;
-    --sidebar-border: 0.922 0 0;
-    --sidebar-ring: 0.708 0 0;
-
-    /* Brand color values for use in CSS */
-    --color-navy-50: oklch(0.97 0.01 255);
-    --color-navy-100: oklch(0.93 0.025 255);
-    --color-navy-700: oklch(0.28 0.11 255);
-    --color-navy-800: oklch(0.22 0.08 255);
-    --color-navy-900: oklch(0.16 0.06 255);
-    --color-gold: oklch(0.78 0.15 75);
-  }
-
-  .dark {
-    --background: 0.12 0.04 255;
-    --foreground: 0.95 0.01 240;
-
-    --card: 0.17 0.05 255;
-    --card-foreground: 0.95 0.01 240;
-
-    --popover: 0.2 0.05 255;
-    --popover-foreground: 0.95 0.01 240;
-
-    --primary: 0.55 0.18 255;
-    --primary-foreground: 0.98 0 0;
-
-    --secondary: 0.22 0.06 255;
-    --secondary-foreground: 0.9 0.02 240;
-
-    --muted: 0.22 0.05 255;
-    --muted-foreground: 0.65 0.04 250;
-
-    --accent: 0.28 0.07 255;
-    --accent-foreground: 0.9 0.02 240;
-
-    --destructive: 0.704 0.191 22.216;
-    --destructive-foreground: 0.205 0 0;
-
-    --border: 0.28 0.06 255;
-    --input: 0.28 0.06 255;
-    --ring: 0.55 0.18 255;
-
-    --success: 0.55 0.15 145;
-    --success-foreground: 0.98 0 0;
-    --warning: 0.72 0.18 60;
-    --warning-foreground: 0.15 0 0;
-
-    --sidebar: 0.17 0.05 255;
+    --sidebar: 0.17 0.025 240;
     --sidebar-foreground: 0.95 0.01 240;
-    --sidebar-primary: 0.55 0.18 255;
+    --sidebar-primary: 0.65 0.18 200;
     --sidebar-primary-foreground: 0.98 0 0;
-    --sidebar-accent: 0.22 0.06 255;
-    --sidebar-accent-foreground: 0.9 0.02 240;
-    --sidebar-border: 0.28 0.06 255;
-    --sidebar-ring: 0.55 0.18 255;
+    --sidebar-accent: 0.22 0.03 240;
+    --sidebar-accent-foreground: 0.90 0.01 240;
+    --sidebar-border: 0.28 0.03 240;
+    --sidebar-ring: 0.65 0.18 200;
   }
 
+  .light {
+    --background: 0.97 0.005 240;
+    --foreground: 0.13 0.02 240;
+
+    --card: 1.0 0 0;
+    --card-foreground: 0.13 0.02 240;
+
+    --popover: 1.0 0 0;
+    --popover-foreground: 0.13 0.02 240;
+
+    --primary: 0.50 0.18 200;
+    --primary-foreground: 0.98 0.005 240;
+
+    --secondary: 0.92 0.01 240;
+    --secondary-foreground: 0.13 0.02 240;
+
+    --muted: 0.92 0.01 240;
+    --muted-foreground: 0.45 0.02 240;
+
+    --accent: 0.45 0.18 160;
+    --accent-foreground: 0.98 0.005 240;
+
+    --destructive: 0.55 0.22 25;
+    --destructive-foreground: 0.98 0.01 240;
+
+    --border: 0.85 0.01 240;
+    --input: 0.92 0.01 240;
+    --ring: 0.50 0.18 200;
+
+    --gold: 0.65 0.15 85;
+    --gold-foreground: 0.98 0.005 240;
+
+    --sidebar: 0.97 0.005 240;
+    --sidebar-foreground: 0.13 0.02 240;
+    --sidebar-primary: 0.50 0.18 200;
+    --sidebar-primary-foreground: 0.98 0.005 240;
+    --sidebar-accent: 0.92 0.01 240;
+    --sidebar-accent-foreground: 0.13 0.02 240;
+    --sidebar-border: 0.85 0.01 240;
+    --sidebar-ring: 0.50 0.18 200;
+  }
+}
+
+@layer base {
   * {
     @apply border-border;
   }
 
   body {
-    @apply bg-background text-foreground font-sans antialiased;
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  /* ─── Global Input Visibility Fix ─────────────────────────────────────────── */
+  input,
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  input[type="tel"],
+  input[type="url"],
+  input[type="search"],
+  input[type="date"],
+  input[type="time"],
+  input[type="datetime-local"],
+  textarea,
+  select {
+    color: #ffffff !important;
+    background-color: #1a2230 !important;
+    caret-color: #ffffff !important;
+    opacity: 1 !important;
+    border-color: oklch(0.30 0.04 240);
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: #9ca3af !important;
+    opacity: 1 !important;
+  }
+
+  input:focus,
+  textarea:focus,
+  select:focus {
+    color: #ffffff !important;
+    background-color: #1a2230 !important;
+    caret-color: #ffffff !important;
+    outline: none;
+  }
+
+  /* OTP input slots */
+  [data-input-otp] input,
+  [data-input-otp-slot] {
+    color: #ffffff !important;
+    background-color: #1a2230 !important;
+    caret-color: #ffffff !important;
+  }
+
+  /* Select dropdown options */
+  select option {
+    color: #ffffff !important;
+    background-color: #1a2230 !important;
   }
 }
 
 @layer components {
-  /* AES-256 badge: dark navy background, gold text, gold border with opacity via inline CSS */
   .badge-aes {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.25rem;
-    padding: 0.125rem 0.5rem;
-    border-radius: 9999px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    background-color: var(--color-navy-800);
-    color: var(--color-gold);
-    border: 1px solid oklch(0.78 0.15 75 / 0.3);
+    @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold;
+    border: 1px solid oklch(0.78 0.15 85 / 0.3);
+    color: oklch(0.78 0.15 85);
+    background-color: oklch(0.78 0.15 85 / 0.1);
   }
 
-  .badge-e2e {
-    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200;
-  }
-
-  .badge-no-access {
-    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200;
-  }
-
-  .badge-pending {
-    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200;
-  }
-
-  .badge-verified {
-    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200;
-  }
-
-  .badge-rejected {
-    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-red-50 text-red-700 border border-red-200;
-  }
-
+  /* glass-card: uses plain CSS to avoid @apply opacity modifier issues */
   .glass-card {
-    @apply bg-white/80 backdrop-blur-sm border border-navy-100 shadow-sm;
+    @apply rounded-xl;
+    border: 1px solid oklch(0.28 0.03 240 / 0.5);
+    background-color: oklch(0.17 0.025 240 / 0.8);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
   }
 
-  .hero-gradient {
-    background: linear-gradient(135deg, oklch(0.18 0.08 255) 0%, oklch(0.25 0.1 260) 50%, oklch(0.2 0.06 250) 100%);
-  }
-
-  .section-gradient {
-    background: linear-gradient(180deg, oklch(0.97 0.008 240) 0%, oklch(0.95 0.015 245) 100%);
-  }
-}
-
-@layer utilities {
-  .text-gradient {
-    background: linear-gradient(135deg, oklch(0.65 0.18 255), oklch(0.75 0.12 200));
+  /* gradient-text: uses plain CSS to avoid @apply with CSS variable colors */
+  .gradient-text {
+    background: linear-gradient(
+      to right,
+      oklch(0.65 0.18 200),
+      oklch(0.55 0.20 160)
+    );
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
 
-  .transition-smooth {
-    @apply transition-all duration-200 ease-in-out;
+  .hero-gradient {
+    background: radial-gradient(
+      ellipse at 50% 0%,
+      oklch(0.65 0.18 200 / 0.15) 0%,
+      transparent 70%
+    );
+  }
+
+  .section-gradient {
+    background: linear-gradient(
+      180deg,
+      transparent 0%,
+      oklch(0.55 0.20 160 / 0.05) 50%,
+      transparent 100%
+    );
   }
 }

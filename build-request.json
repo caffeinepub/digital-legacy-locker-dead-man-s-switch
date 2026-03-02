@@ -1,140 +1,73 @@
 {
   "kind": "build_request",
-  "title": "Death Verification Request Page with OTP, File Uploads, and Admin Dashboard Integration",
-  "projectName": "Digital Legacy Locker",
+  "title": "Fix admin login visibility, post-login redirects, and admin-only navbar links",
   "priority": "high",
   "requirements": [
     {
       "id": "REQ-1",
-      "text": "Create a new frontend route '/death-verification-request' with a secure Death Verification Request page styled in a dark professional theme consistent with the existing app palette. The page must include: Full Name of Deceased User (text input), Registered Email of Deceased User (email input), Heir's Full Name (text input), Relationship to Deceased (dropdown or text input), Government ID Upload (required, PDF/JPG/PNG, max 10MB), Official Death Certificate Upload (required, PDF/JPG/PNG, max 10MB), and Optional Relationship Proof Upload (PDF/JPG/PNG, max 10MB). Display privacy and security callout labels (e.g., 'All data is encrypted and handled confidentially'). Register this route in App.tsx.",
+      "text": "On the LoginPage, ensure the admin login option/button/tab is clearly visible and accessible to users without requiring any special steps. Both 'User Login' and 'Admin Login' modes must be visually distinguishable and immediately available on page load.",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-recent-last"
+          "msg-1"
+        ],
+        "quotes": [
+          "no changes have been mad."
         ]
       },
       "acceptanceCriteria": [
-        "Route '/death-verification-request' renders without errors",
-        "All six form fields are present and labeled clearly",
-        "File upload inputs accept only PDF, JPG, PNG and reject other formats with an inline error message",
-        "Files exceeding 10MB are rejected with an inline error message",
-        "Page uses the existing dark theme color palette",
-        "Privacy/security callout is visible on the page"
+        "Navigating to /login shows both user and admin login options without any extra interaction",
+        "The admin login toggle/tab/button is rendered in the DOM and not hidden by CSS or conditional logic on initial load",
+        "Switching between user and admin login modes works correctly"
       ]
     },
     {
       "id": "REQ-2",
-      "text": "Implement an in-app OTP verification step on the Death Verification Request page. Before the form can be submitted, the heir must request an OTP (generated in the frontend, displayed on screen with a copy-to-clipboard button, consistent with the existing OTP pattern in LoginPage.tsx and RegistrationPage.tsx). The heir must enter the correct OTP to unlock the final submit button. This step should be clearly labeled as 'Verify Your Identity before Submission'.",
+      "text": "After a successful admin login via Internet Identity and OTP verification, the user must be automatically redirected to the admin dashboard (/admin/dashboard). After a successful regular user login, the user must be redirected to the user dashboard or registration page as appropriate.",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-recent-last"
+          "msg-1"
+        ],
+        "quotes": [
+          "no changes have been mad."
         ]
       },
       "acceptanceCriteria": [
-        "An 'Send OTP' / 'Generate OTP' button is present on the page",
-        "OTP is displayed in-app with a copy-to-clipboard button after generation",
-        "The Submit button is disabled until the correct OTP is entered",
-        "Entering an incorrect OTP shows an error message",
-        "Entering the correct OTP enables the Submit button"
+        "Admin login flow ends with a redirect to /admin/dashboard",
+        "New user login redirects to /register if no profile exists",
+        "Returning user login redirects to /dashboard",
+        "No redirect loops or stalls occur after login"
       ]
     },
     {
       "id": "REQ-3",
-      "text": "After successful OTP verification and form submission, replace the form with a confirmation message: 'Your request has been received and is under verification. You will be notified within 3–5 business days.' Display this in a styled confirmation card with a checkmark icon and security badge.",
+      "text": "In the Navbar, admin-only navigation links (e.g., links to admin dashboard, document review, death verification, legal verification, controlled access release) must only appear when the authenticated user is confirmed to be an admin. They must not appear for guests or regular authenticated users.",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-recent-last"
+          "msg-1"
+        ],
+        "quotes": [
+          "no changes have been mad."
         ]
       },
       "acceptanceCriteria": [
-        "On successful submission the form is hidden and the confirmation card is shown",
-        "The confirmation card displays the exact message specified",
-        "A success/checkmark icon and security badge are visible on the confirmation card"
-      ]
-    },
-    {
-      "id": "REQ-4",
-      "text": "Add a backend Motoko data type and stable storage for DeathVerificationRequest records. Each record must store: deceasedFullName (Text), deceasedEmail (Text), heirFullName (Text), relationshipToDeceased (Text), governmentIdBlob (Blob), deathCertificateBlob (Blob), relationshipProofBlob (optional Blob), status (variant: #PendingVerification | #Approved | #Rejected), submittedAt (Int timestamp), and a unique requestId (Nat). Expose a public update function submitDeathVerificationRequest that accepts these fields, stores the record with status #PendingVerification, and returns the requestId. Add a timestamped activity log entry for each submission.",
-      "target": "backend",
-      "source": {
-        "messageIds": [
-          "msg-recent-last"
-        ]
-      },
-      "acceptanceCriteria": [
-        "DeathVerificationRequest type is defined with all required fields",
-        "submitDeathVerificationRequest function is callable and stores the record",
-        "Newly created records have status #PendingVerification",
-        "A timestamped activity log entry is created on submission",
-        "The function returns a unique requestId"
-      ]
-    },
-    {
-      "id": "REQ-5",
-      "text": "Expose a backend admin-only query function getDeathVerificationRequests that returns all DeathVerificationRequest records. Also expose an admin-only update function updateDeathVerificationStatus(requestId: Nat, newStatus: variant{#Approved; #Rejected}) that updates the status of a request and logs the action. Enforce admin-only access using the existing role-based access control pattern in main.mo.",
-      "target": "backend",
-      "source": {
-        "messageIds": [
-          "msg-recent-last"
-        ]
-      },
-      "acceptanceCriteria": [
-        "getDeathVerificationRequests is accessible only to admin principals",
-        "updateDeathVerificationStatus updates the correct record's status",
-        "Non-admin calls to these functions return an authorization error",
-        "Status updates are recorded in the activity log"
-      ]
-    },
-    {
-      "id": "REQ-6",
-      "text": "Add a 'Death Verification Requests' section to the existing Admin dashboard (AdminLegalVerificationPage.tsx or a new AdminDeathVerificationPage.tsx). Display a table of all submitted DeathVerificationRequest records showing: requestId, deceasedFullName, deceasedEmail, heirFullName, relationshipToDeceased, status badge (Pending Verification / Approved / Rejected), and submittedAt timestamp. Each row must have Approve and Reject action buttons that call updateDeathVerificationStatus. Use the existing SecurityBadge component for status display.",
-      "target": "frontend",
-      "source": {
-        "messageIds": [
-          "msg-recent-last"
-        ]
-      },
-      "acceptanceCriteria": [
-        "Admin dashboard shows the Death Verification Requests table",
-        "All required columns are displayed",
-        "Status is shown using SecurityBadge component",
-        "Approve and Reject buttons trigger status update and refresh the table",
-        "Non-admin users cannot access this section"
-      ]
-    },
-    {
-      "id": "REQ-7",
-      "text": "Add a navigation link to the Death Verification Request page in the public-facing Navbar (visible to unauthenticated users) or on the LandingPage as a CTA, labeled 'Submit Heir Verification Request'. Register the route in App.tsx router configuration.",
-      "target": "frontend",
-      "source": {
-        "messageIds": [
-          "msg-recent-last"
-        ]
-      },
-      "acceptanceCriteria": [
-        "A link to '/death-verification-request' is accessible from the public navigation or landing page",
-        "Clicking the link navigates to the Death Verification Request page",
-        "The route is registered in App.tsx"
+        "Unauthenticated (guest) users see no admin links in the Navbar",
+        "Regular authenticated (non-admin) users see no admin links in the Navbar",
+        "Authenticated admin users see admin-specific navigation links in the Navbar",
+        "Admin link visibility updates correctly upon login and logout"
       ]
     }
   ],
   "constraints": [
-    "All Motoko logic must remain in backend/main.mo (single-actor architecture)",
-    "Do not edit any files under frontend/src/hooks/ or frontend/src/components/ui",
-    "OTP must be displayed in-app (no email or SMS delivery — consistent with existing platform pattern)",
-    "File uploads must be stored as Blobs in the backend canister; no external cloud storage",
-    "Admin approval is mandatory — no auto-approval of death verification requests",
-    "File validation (PDF/JPG/PNG only, max 10MB) must be enforced on the frontend before submission"
+    "Do not modify files under frontend/src/hooks/useInternetIdentity.ts, frontend/src/hooks/useActor.ts, frontend/src/main.tsx, or frontend/src/components/ui",
+    "All fixes must use the existing React Query, TanStack Router, and Internet Identity patterns already in the codebase"
   ],
   "nonGoals": [
-    "External email or SMS OTP delivery",
-    "Integration with government death registry APIs",
-    "Blockchain-based verification logs",
-    "AI document analysis or confidence scoring (separate future feature)",
-    "Automatic access grant without admin approval",
-    "Payment or subscription gating"
+    "Adding new admin features or pages",
+    "Changing the backend authorization logic",
+    "Redesigning the visual theme or layout"
   ],
   "imageRequirements": {
     "required": [],
