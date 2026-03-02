@@ -1,73 +1,73 @@
 {
   "kind": "build_request",
-  "title": "Fix admin login visibility, post-login redirects, and admin-only navbar links",
+  "title": "Admin Login Visibility and Rupee Currency Display",
+  "projectName": "Dead Man's Switch",
   "priority": "high",
   "requirements": [
     {
       "id": "REQ-1",
-      "text": "On the LoginPage, ensure the admin login option/button/tab is clearly visible and accessible to users without requiring any special steps. Both 'User Login' and 'Admin Login' modes must be visually distinguishable and immediately available on page load.",
+      "text": "On the LoginPage, ensure the admin login option is clearly visible and accessible. The toggle or button to switch to 'admin' login mode must be displayed prominently on the page without requiring any hidden interaction or URL parameter manipulation.",
       "target": "frontend",
       "source": {
         "messageIds": [
           "msg-1"
         ],
         "quotes": [
-          "no changes have been mad."
+          "Admin login visibility"
         ]
       },
       "acceptanceCriteria": [
-        "Navigating to /login shows both user and admin login options without any extra interaction",
-        "The admin login toggle/tab/button is rendered in the DOM and not hidden by CSS or conditional logic on initial load",
-        "Switching between user and admin login modes works correctly"
+        "A clearly labeled 'Admin Login' button or tab is visible on the login page without any special URL parameters",
+        "Clicking the admin login toggle switches the form to admin mode",
+        "Admin login mode is visually distinguishable from user login mode"
       ]
     },
     {
       "id": "REQ-2",
-      "text": "After a successful admin login via Internet Identity and OTP verification, the user must be automatically redirected to the admin dashboard (/admin/dashboard). After a successful regular user login, the user must be redirected to the user dashboard or registration page as appropriate.",
+      "text": "On the LoginPage, display a currency note or label showing the Indian Rupee symbol (₹) instead of or alongside the US Dollar symbol ($). Any pricing or currency references on the login page must use ₹ (INR) formatting.",
       "target": "frontend",
       "source": {
         "messageIds": [
           "msg-1"
         ],
         "quotes": [
-          "no changes have been mad."
+          "Currency display ($ to ₹) on the login page"
         ]
       },
       "acceptanceCriteria": [
-        "Admin login flow ends with a redirect to /admin/dashboard",
-        "New user login redirects to /register if no profile exists",
-        "Returning user login redirects to /dashboard",
-        "No redirect loops or stalls occur after login"
+        "No bare $ symbol appears on the login page",
+        "Any currency value displayed uses the ₹ (Indian Rupee) symbol",
+        "Currency display is consistent and correctly formatted"
       ]
     },
     {
       "id": "REQ-3",
-      "text": "In the Navbar, admin-only navigation links (e.g., links to admin dashboard, document review, death verification, legal verification, controlled access release) must only appear when the authenticated user is confirmed to be an admin. They must not appear for guests or regular authenticated users.",
+      "text": "Ensure all login flows (both user and admin) correctly persist session/authentication state after login so that the user remains logged in on navigation. Post-login redirects must work: admin users go to the admin dashboard, registered users go to the user dashboard, and unregistered users go to the registration page.",
       "target": "frontend",
       "source": {
         "messageIds": [
           "msg-1"
         ],
         "quotes": [
-          "no changes have been mad."
+          "make sure to save changes and loginns"
         ]
       },
       "acceptanceCriteria": [
-        "Unauthenticated (guest) users see no admin links in the Navbar",
-        "Regular authenticated (non-admin) users see no admin links in the Navbar",
-        "Authenticated admin users see admin-specific navigation links in the Navbar",
-        "Admin link visibility updates correctly upon login and logout"
+        "After a successful user login, authenticated state is preserved and the user is redirected to the correct page",
+        "After a successful admin login, the admin is redirected to the admin dashboard",
+        "Newly authenticated users without a profile are redirected to the registration page",
+        "Refreshing the page after login does not log the user out"
       ]
     }
   ],
   "constraints": [
     "Do not modify files under frontend/src/hooks/useInternetIdentity.ts, frontend/src/hooks/useActor.ts, frontend/src/main.tsx, or frontend/src/components/ui",
-    "All fixes must use the existing React Query, TanStack Router, and Internet Identity patterns already in the codebase"
+    "Keep all Motoko logic in backend/main.mo — do not create additional backend files unless migration is required"
   ],
   "nonGoals": [
-    "Adding new admin features or pages",
-    "Changing the backend authorization logic",
-    "Redesigning the visual theme or layout"
+    "Adding any new backend endpoints or data models",
+    "Changing the overall app theme or design language",
+    "Implementing a custom currency conversion API or real-time exchange rates"
   ],
   "imageRequirements": {
     "required": [],

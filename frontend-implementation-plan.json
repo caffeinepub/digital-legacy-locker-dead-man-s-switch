@@ -1,60 +1,59 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Fix admin login visibility, post-login redirects, and admin-only navbar links",
+  "title": "Admin Login Visibility and Rupee Currency Display",
   "requirements": [
     {
       "id": "REQ-1",
-      "summary": "Ensure admin login option is clearly visible and accessible on the LoginPage without requiring special steps",
+      "summary": "Make admin login option clearly visible and accessible on the LoginPage without requiring hidden interactions or URL parameters",
       "acceptanceCriteria": [
-        "Navigating to /login shows both user and admin login options without any extra interaction",
-        "The admin login toggle/tab/button is rendered in the DOM and not hidden by CSS or conditional logic on initial load",
-        "Switching between user and admin login modes works correctly"
+        "A clearly labeled 'Admin Login' button or tab is visible on the login page without any special URL parameters",
+        "Clicking the admin login toggle switches the form to admin mode",
+        "Admin login mode is visually distinguishable from user login mode"
       ],
       "file_operations": [
         {
           "path": "frontend/src/pages/LoginPage.tsx",
           "operation": "modify",
-          "description": "Update the LoginPage component to ensure both 'User Login' and 'Admin Login' modes are immediately visible on page load. Remove any conditional rendering that hides the admin login toggle on initial render. Ensure the tab/button UI for switching between user and admin modes is always rendered in the DOM and styled to be clearly visible. Verify that the isAdminMode state toggle functionality remains intact and that both modes can be accessed by clicking the respective tab or button."
+          "description": "Add a prominent toggle or tab control at the top of the login form that allows users to switch between 'User Login' and 'Admin Login' modes. The toggle should be visible by default without any URL parameter checks. Update the UI to clearly indicate which mode is active (e.g., with distinct styling, labels, or tab states). Ensure the mode state is managed in component state and persists visually while the user interacts with the form."
         }
       ]
     },
     {
       "id": "REQ-2",
-      "summary": "Implement correct post-login redirects for admin and regular users after successful authentication",
+      "summary": "Display Indian Rupee (₹) currency symbol instead of US Dollar ($) on the LoginPage for any pricing or currency references",
       "acceptanceCriteria": [
-        "Admin login flow ends with a redirect to /admin/dashboard",
-        "New user login redirects to /register if no profile exists",
-        "Returning user login redirects to /dashboard",
-        "No redirect loops or stalls occur after login"
+        "No bare $ symbol appears on the login page",
+        "Any currency value displayed uses the ₹ (Indian Rupee) symbol",
+        "Currency display is consistent and correctly formatted"
       ],
       "file_operations": [
         {
           "path": "frontend/src/pages/LoginPage.tsx",
           "operation": "modify",
-          "description": "Add redirect logic after successful OTP verification in the handleOtpVerify function. Use the useNavigate hook from TanStack Router. After OTP verification succeeds and identity is confirmed: (1) For admin login mode (isAdminMode === true), navigate to '/admin/dashboard'. (2) For regular user login mode, fetch the user profile using the existing useGetCallerUserProfile hook. If the profile is null, navigate to '/register'. If the profile exists, navigate to '/dashboard'. Ensure no redirect occurs until both authentication and profile check (for regular users) are complete. Handle loading states appropriately to prevent premature redirects."
-        },
-        {
-          "path": "frontend/src/hooks/useQueries.ts",
-          "operation": "modify",
-          "description": "Review and ensure the useGetCallerUserProfile hook properly handles the loading and fetching states to prevent race conditions during login redirects. Confirm that the hook returns accurate isLoading and isFetched states that can be used in LoginPage to determine when profile data is ready for redirect decisions. No changes may be needed if the hook already handles this correctly, but verify the implementation aligns with the redirect logic requirements."
+          "description": "Replace any currency references that use the US Dollar symbol ($) with the Indian Rupee symbol (₹). Review all text, labels, and pricing displays on the page to ensure consistent INR formatting. If no currency references currently exist, this operation ensures future-proofing by adding a comment or constant for currency formatting."
         }
       ]
     },
     {
       "id": "REQ-3",
-      "summary": "Show admin-only navigation links in the Navbar only when the authenticated user is confirmed to be an admin",
+      "summary": "Ensure login flows correctly persist session state and redirect users appropriately based on their role and profile status",
       "acceptanceCriteria": [
-        "Unauthenticated (guest) users see no admin links in the Navbar",
-        "Regular authenticated (non-admin) users see no admin links in the Navbar",
-        "Authenticated admin users see admin-specific navigation links in the Navbar",
-        "Admin link visibility updates correctly upon login and logout"
+        "After a successful user login, authenticated state is preserved and the user is redirected to the correct page",
+        "After a successful admin login, the admin is redirected to the admin dashboard",
+        "Newly authenticated users without a profile are redirected to the registration page",
+        "Refreshing the page after login does not log the user out"
       ],
       "file_operations": [
         {
-          "path": "frontend/src/components/Navbar.tsx",
+          "path": "frontend/src/pages/LoginPage.tsx",
           "operation": "modify",
-          "description": "Update the Navbar component to conditionally render admin-only links (e.g., Admin Dashboard, Document Review, Death Verification, Legal Verification, Controlled Access Release) based on the user's admin status. Use the existing useIsCallerAdmin hook from useQueries.ts to determine if the current user is an admin. Only render admin navigation items when isAuthenticated is true AND isAdmin is true. Ensure the admin status check respects the loading state of useIsCallerAdmin to prevent flickering or incorrect initial rendering. Verify that admin links disappear immediately upon logout when the queryClient is cleared."
+          "description": "Review and strengthen the post-login redirect logic to ensure it properly handles all three cases: (1) admins redirect to /admin/dashboard, (2) authenticated users with a profile redirect to /dashboard, and (3) authenticated users without a profile redirect to /registration. Ensure that the authentication state (identity and role) is correctly retrieved from useInternetIdentity and that the component waits for both authentication and profile checks to complete before determining the redirect target. Verify that session persistence is handled by the existing useInternetIdentity hook and that no additional session-clearing bugs exist in the login flow."
+        },
+        {
+          "path": "frontend/src/hooks/useInternetIdentity.ts",
+          "operation": "modify",
+          "description": "Review session persistence logic to ensure that authenticated identity is correctly stored and restored across page refreshes. Verify that the identity persists in storage and is rehydrated on app mount. If any issues exist with identity clearing on refresh, fix them to ensure users remain logged in. This file should already handle persistence; verify it is working correctly and add any missing safeguards."
         }
       ]
     }

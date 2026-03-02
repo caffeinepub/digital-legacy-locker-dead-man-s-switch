@@ -1,38 +1,54 @@
 {
   "schemaVersion": "1.0.0",
   "projectStateVersion": 3,
-  "summary": "New project",
+  "summary": "Web app project with admin login page and currency display ($ to ₹) features being implemented.",
   "architectural_notes": [],
-  "known_issues": [],
-  "isFixRequest": false,
+  "known_issues": [
+    "Builds have been hitting iteration/budget limits and not completing successfully, resulting in no changes being applied."
+  ],
+  "isFixRequest": true,
   "existing_features": [
     {
-      "id": "feature-on-the-loginpage-ensure-the-admin-login-option-button-tab-is-clearly-visible-and-accessible-to-users-without-requiring-any-special-steps-both-user-login-and-admin-login-modes-must-be-visually-distinguishable-and-immediately-available-on-page-load",
-      "title": "On the LoginPage, ensure the admin login option/button/tab is clearly visible and accessible to users without requiring any special steps. Both 'User Login' and 'Admin Login' modes must be visually distinguishable and immediately available on page load.",
+      "id": "feature-on-the-loginpage-ensure-the-admin-login-option-is-clearly-visible-and-accessible-the-toggle-or-button-to-switch-to-admin-login-mode-must-be-displayed-prominently-on-the-page-without-requiring-any-hidden-interaction-or-url-parameter-manipulation",
+      "title": "On the LoginPage, ensure the admin login option is clearly visible and accessible. The toggle or button to switch to 'admin' login mode must be displayed prominently on the page without requiring any hidden interaction or URL parameter manipulation.",
       "reqIds": [
         "REQ-1"
       ],
       "version": 1
     },
     {
-      "id": "feature-after-a-successful-admin-login-via-internet-identity-and-otp-verification-the-user-must-be-automatically-redirected-to-the-admin-dashboard-admin-dashboard-after-a-successful-regular-user-login-the-user-must-be-redirected-to-the-user-dashboard-or-registration-page-as-appropriate",
-      "title": "After a successful admin login via Internet Identity and OTP verification, the user must be automatically redirected to the admin dashboard (/admin/dashboard). After a successful regular user login, the user must be redirected to the user dashboard or registration page as appropriate.",
+      "id": "feature-on-the-loginpage-display-a-currency-note-or-label-showing-the-indian-rupee-symbol-instead-of-or-alongside-the-us-dollar-symbol-any-pricing-or-currency-references-on-the-login-page-must-use-inr-formatting",
+      "title": "On the LoginPage, display a currency note or label showing the Indian Rupee symbol (₹) instead of or alongside the US Dollar symbol ($). Any pricing or currency references on the login page must use ₹ (INR) formatting.",
       "reqIds": [
         "REQ-2"
       ],
       "version": 1
     },
     {
-      "id": "feature-in-the-navbar-admin-only-navigation-links-e-g-links-to-admin-dashboard-document-review-death-verification-legal-verification-controlled-access-release-must-only-appear-when-the-authenticated-user-is-confirmed-to-be-an-admin-they-must-not-appear-for-guests-or-regular-authenticated-users",
-      "title": "In the Navbar, admin-only navigation links (e.g., links to admin dashboard, document review, death verification, legal verification, controlled access release) must only appear when the authenticated user is confirmed to be an admin. They must not appear for guests or regular authenticated users.",
+      "id": "feature-ensure-all-login-flows-both-user-and-admin-correctly-persist-session-authentication-state-after-login-so-that-the-user-remains-logged-in-on-navigation-post-login-redirects-must-work-admin-users-go-to-the-admin-dashboard-registered-users-go-to-the-user-dashboard-and-unregistered-users-go-to-the-registration-page",
+      "title": "Ensure all login flows (both user and admin) correctly persist session/authentication state after login so that the user remains logged in on navigation. Post-login redirects must work: admin users go to the admin dashboard, registered users go to the user dashboard, and unregistered users go to the registration page.",
       "reqIds": [
         "REQ-3"
       ],
       "version": 1
     }
   ],
-  "new_feature_requests": [],
-  "projectName": "Fix admin login visibility, post-login redirects, and admin-only navbar links",
+  "new_feature_requests": [
+    {
+      "id": "AR-1",
+      "summary": "Admin login page visibility/functionality",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-2",
+      "summary": "Currency display conversion from dollars to rupees on the login page",
+      "reqIds": [],
+      "status": "pending"
+    }
+  ],
+  "gameProjectType": "none",
+  "projectName": "Dead Man's Switch",
   "clarification_mode": "instant",
   "clarification_rounds": 0
 }

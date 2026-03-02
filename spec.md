@@ -1,11 +1,13 @@
 # Specification
 
 ## Summary
-**Goal:** Fix three frontend issues: admin login visibility on the login page, post-login redirects for both admin and regular users, and admin-only navbar links being properly gated.
+**Goal:** Improve the LoginPage by making admin login clearly visible, switching currency display from $ to ₹, and ensuring authentication state is correctly persisted with proper post-login redirects.
 
 **Planned changes:**
-- Update the LoginPage so that both "User Login" and "Admin Login" options are visible and accessible on initial page load, with clear visual distinction between the two modes
-- Fix the post-login redirect logic so that admins are redirected to `/admin/dashboard` after successful login, new users are redirected to `/register`, and returning users are redirected to `/dashboard`
-- Update the Navbar to show admin-specific navigation links only when the authenticated user is confirmed as an admin; guests and regular users must not see any admin links; visibility updates correctly on login and logout
+- Add a clearly labeled "Admin Login" button/tab on the LoginPage that is visible without any special URL parameters or hidden interactions
+- Make admin login mode visually distinguishable from user login mode
+- Replace any $ (USD) currency symbols on the LoginPage with ₹ (INR)
+- Ensure authenticated state is persisted after login so page refreshes do not log the user out
+- Implement correct post-login redirects: admin users → admin dashboard, registered users → user dashboard, unregistered users → registration page
 
-**User-visible outcome:** Users can immediately see and switch between user and admin login modes on the login page, are redirected to the correct destination after login, and admin navigation links only appear for admin users in the navbar.
+**User-visible outcome:** Users can clearly see and switch to admin login mode directly on the login page, all currency references show ₹ instead of $, and after logging in users are reliably redirected to the correct page and remain logged in on refresh.

@@ -1,7 +1,7 @@
 {
   "kind": "coverage_report",
   "version": "1.0",
-  "generatedAt": "2026-03-02T07:09:05.691Z",
+  "generatedAt": "2026-03-02T07:14:49.496Z",
   "sources": {
     "buildRequest": true,
     "implementationPlan": true
@@ -12,7 +12,7 @@
     "items": [
       {
         "id": "REQ-1",
-        "summary": "On the LoginPage, ensure the admin login option/button/tab is clearly visible and accessible to users without requiring any special steps. Both 'User Login' and 'Admin Login' modes must be visually distinguishable and immediately available on page load.",
+        "summary": "On the LoginPage, ensure the admin login option is clearly visible and accessible. The toggle or button to switch to 'admin' login mode must be displayed prominently on the page without requiring any hidden interaction or URL parameter manipulation.",
         "status": "implemented",
         "plannedFiles": [
           "frontend/src/pages/LoginPage.tsx"
@@ -23,11 +23,10 @@
       },
       {
         "id": "REQ-2",
-        "summary": "After a successful admin login via Internet Identity and OTP verification, the user must be automatically redirected to the admin dashboard (/admin/dashboard). After a successful regular user login, the user must be redirected to the user dashboard or registration page as appropriate.",
+        "summary": "On the LoginPage, display a currency note or label showing the Indian Rupee symbol (₹) instead of or alongside the US Dollar symbol ($). Any pricing or currency references on the login page must use ₹ (INR) formatting.",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/pages/LoginPage.tsx",
-          "frontend/src/hooks/useQueries.ts"
+          "frontend/src/pages/LoginPage.tsx"
         ],
         "matchedFiles": [
           "frontend/src/pages/LoginPage.tsx"
@@ -35,13 +34,14 @@
       },
       {
         "id": "REQ-3",
-        "summary": "In the Navbar, admin-only navigation links (e.g., links to admin dashboard, document review, death verification, legal verification, controlled access release) must only appear when the authenticated user is confirmed to be an admin. They must not appear for guests or regular authenticated users.",
+        "summary": "Ensure all login flows (both user and admin) correctly persist session/authentication state after login so that the user remains logged in on navigation. Post-login redirects must work: admin users go to the admin dashboard, registered users go to the user dashboard, and unregistered users go to the registration page.",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/components/Navbar.tsx"
+          "frontend/src/pages/LoginPage.tsx",
+          "frontend/src/hooks/useInternetIdentity.ts"
         ],
         "matchedFiles": [
-          "frontend/src/components/Navbar.tsx"
+          "frontend/src/pages/LoginPage.tsx"
         ]
       }
     ]
@@ -51,7 +51,6 @@
     "feature_evidence.json",
     "frontend-file-summaries.txt",
     "frontend-implementation-plan.json",
-    "frontend/src/components/Navbar.tsx",
     "frontend/src/pages/LoginPage.tsx",
     "project_state.json",
     "scratch/component-selection.json",
